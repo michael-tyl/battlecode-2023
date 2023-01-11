@@ -1,4 +1,4 @@
-package myplayer;
+package myplayer_v0_1;
 
 import battlecode.common.*;
 
