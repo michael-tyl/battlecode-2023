@@ -275,10 +275,18 @@ public strictfp class RobotPlayer {
                         }
                         else {
                             int[] islands = rc.senseNearbyIslands();
-                            if(islands.length >= 1) {
-                                int idx = islands[0];
+
+                            int curid = 0;
+                            for(; curid < islands.length; curid++)
+                            {
+                                if(rc.senseTeamOccupyingIsland(islands[curid]) == Team.NEUTRAL)
+                                    break;
+                            }
+
+                            if(curid < islands.length) {
+                                int idx = islands[curid];
                                 MapLocation[] goIsland = rc.senseNearbyIslandLocations(idx);
-                                MapLocation goToLoc = goIsland[0];
+                                MapLocation goToLoc = goIsland[curid];
 
                                 normalDir = me.directionTo(goToLoc);
 
