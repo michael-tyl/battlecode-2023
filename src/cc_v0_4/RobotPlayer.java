@@ -34,6 +34,9 @@ public strictfp class RobotPlayer {
      */
     static final Random rng = new Random(6147);
 
+    /** HQ STATIC VARS */
+    static int anchor_cooldown = 50; // How many turns until next anchor can be made
+
     /** CARRIER STATIC VARS */
     static final int MAX_CAPACITY = 40; // capcity of carriers
 
@@ -135,6 +138,7 @@ public strictfp class RobotPlayer {
         // Collections.shuffle(stkDir);
         while (true) {
             turnCount += 1;
+            anchor_cooldown--;
             try {
                 MapLocation newLoc = rc.getLocation();
                 newLoc = newLoc.add(Direction.WEST);
@@ -143,6 +147,16 @@ public strictfp class RobotPlayer {
                 newLoc = newLoc.add(Direction.SOUTH);
                 newLoc = newLoc.add(Direction.SOUTH);
                 newLoc = newLoc.add(Direction.SOUTH);
+                if (anchor_cooldown <= 49 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
+                    rc.setIndicatorString("Trying to build an anchor");
+                    if (rc.canBuildAnchor(Anchor.ACCELERATING)) {
+                        rc.buildAnchor(Anchor.ACCELERATING);
+                        anchor_cooldown = 50;
+                    } else if (rc.canBuildAnchor(Anchor.STANDARD)) {
+                        rc.buildAnchor(Anchor.STANDARD);
+                        anchor_cooldown = 50;
+                    }
+                } 
                 for (int dx = -3; dx <= 3; dx++) {
                     newLoc = newLoc.add(Direction.SOUTH);
                     newLoc = newLoc.add(Direction.SOUTH);
@@ -151,14 +165,6 @@ public strictfp class RobotPlayer {
                     newLoc = newLoc.add(Direction.SOUTH);
                     newLoc = newLoc.add(Direction.SOUTH);
                     for (int dy = -3; dy <= 3; dy++) {
-                        if (rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
-                            rc.setIndicatorString("Trying to build an anchor");
-                            if (rc.canBuildAnchor(Anchor.ACCELERATING)) {
-                                rc.buildAnchor(Anchor.ACCELERATING);
-                            } else if (rc.canBuildAnchor(Anchor.STANDARD)) {
-                                rc.buildAnchor(Anchor.STANDARD);
-                            }
-                        } 
                         if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
                             rc.setIndicatorString("Trying to build a carrier");
                             rc.buildRobot(RobotType.CARRIER, newLoc);
