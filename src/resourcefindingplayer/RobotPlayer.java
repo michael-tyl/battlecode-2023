@@ -4,6 +4,7 @@ import battlecode.common.*;
 
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -35,12 +36,8 @@ public strictfp class RobotPlayer {
 
     @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
-
-        // Hello world! Standard output is very useful for debugging.
-        // Everything you say here will be directly viewable in your terminal when you run a match!
         System.out.println("I'm a " + rc.getType() + " and I just got created! I have health " + rc.getHealth());
 
-        // You can also use indicators to save debug notes in replays.
         switch (rc.getType()) {
         case HEADQUARTERS: runHeadquarters(rc); break;
         case CARRIER: runCarrier(rc); break;
@@ -51,20 +48,22 @@ public strictfp class RobotPlayer {
 
     
     static void runHeadquarters(RobotController rc) throws GameActionException {
-        Direction dir = directions[rng.nextInt(directions.length)];
+        ArrayList<Direction> stkDir = new ArrayList<Direction>();
+        for (int i = 0; i < directions.length; i++) {
+            stkDir.add(directions[i]);
+        }
+        Collections.shuffle(stkDir);
+        int ind = 0;
         while (true) {
             turnCount += 1;
             try {
-                MapLocation newLoc = rc.getLocation().add(dir);
-                int round = rc.getRoundNum();
-                if (round < SPRAY_MODE_ROUND)
-                    dir = dir.rotateRight().rotateRight();
-                else
-                    dir = dir.rotateRight();
-                if (true || round < FARMING_ROUND_LENGTH || rng.nextBoolean()) {
+                MapLocation newLoc = rc.getLocation().add(stkDir.get(ind));
+                if (true) {
                     rc.setIndicatorString("Trying to build a carrier");
-                    if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) 
+                    if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
                         rc.buildRobot(RobotType.CARRIER, newLoc);
+                        ind++;
+                    }
                 } else {
                     rc.setIndicatorString("Trying to build a laucher");
                     if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) 
@@ -89,6 +88,7 @@ public strictfp class RobotPlayer {
         Stack<Direction> moveList = new Stack<Direction>();         // list of directions
         Direction normalDir = Direction.CENTER;                             // direction robot is "trying" to go in
         MapLocation hqPosition = new MapLocation(0, 0);
+        MapLocation wellPosition = new MapLocation(0, 0);
 
         // initialize normalDir
         RobotInfo[] nearbyRobots = rc.senseNearbyRobots(2, rc.getTeam()); 
@@ -171,16 +171,22 @@ public strictfp class RobotPlayer {
                                 moveList.push(normalDir);
                                 rc.setIndicatorString("move towards well");
                             } else {
-                                RobotInfo blocker = rc.senseRobotAtLocation(me.add(normalDir));
-                                if (blocker != null) {
-                                    while (!rc.canMove(normalDir))
+                                while (!rc.canMove(normalDir))
                                         normalDir = normalDir.rotateRight();
                                     rc.move(normalDir);
                                     moveList.push(normalDir);
                                     rc.setIndicatorString(normalDir.name() + " | move in normal direction");
-                                } else {
-                                    rc.disintegrate();
-                                }
+                                // RobotInfo blocker = rc.senseRobotAtLocation(me.add(normalDir));
+                                // if (blocker != null) {
+                                //     while (!rc.canMove(normalDir))
+                                //         normalDir = normalDir.rotateRight();
+                                //     rc.move(normalDir);
+                                //     moveList.push(normalDir);
+                                //     rc.setIndicatorString(normalDir.name() + " | move in normal direction");
+                                // } else {
+
+                                //     rc.disintegrate();
+                                // }
                             }
                         } else {
                             while (!rc.canMove(normalDir))
