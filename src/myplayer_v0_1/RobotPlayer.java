@@ -1,4 +1,4 @@
-package examplefuncsplayer;
+package myplayer_v0_1;
 
 import battlecode.common.*;
 
@@ -30,6 +30,12 @@ public strictfp class RobotPlayer {
      * we get the same sequence of numbers every time this code is run. This is very useful for debugging!
      */
     static final Random rng = new Random(6147);
+
+    // Tracks the previous target to follow if it goes out of range
+    static MapLocation prevTarget = null;
+
+    // Count number of turns since last prevTarget refresh
+    static short lastRefresh = 0;
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -212,18 +218,52 @@ public strictfp class RobotPlayer {
         int radius = rc.getType().actionRadiusSquared;
         Team opponent = rc.getTeam().opponent();
         RobotInfo[] enemies = rc.senseNearbyRobots(radius, opponent);
-        if (enemies.length >= 0) {
-            // MapLocation toAttack = enemies[0].location;
-            MapLocation toAttack = rc.getLocation().add(Direction.EAST);
+
+        MapLocation curLoc = rc.getLocation();
+
+        // Also try to move randomly.
+        Direction dir = directions[rng.nextInt(directions.length)];
+
+        // Move towards previous target, if available
+        if (prevTarget != null) {
+            dir = curLoc.directionTo(prevTarget);
+            lastRefresh++;
+        }
+        if (lastRefresh >= 3) {
+            prevTarget = null;
+        }
+
+        int curEnemy = 0;
+        // Make sure not attacking HQ
+        while (curEnemy < enemies.length) {
+            MapLocation toAttack = enemies[curEnemy].location;
+
+            if (enemies[curEnemy].type == RobotType.HEADQUARTERS) {
+                curEnemy++;
+                dir = curLoc.directionTo(toAttack);
+                continue;
+            }
+
+            // MapLocation toAttack = rc.getLocation().add(Direction.EAST);
 
             if (rc.canAttack(toAttack)) {
                 rc.setIndicatorString("Attacking");        
                 rc.attack(toAttack);
             }
+
+            if (enemies[curEnemy].health <= 0) {
+                prevTarget = null;
+                dir = directions[rng.nextInt(directions.length)];
+            } else {
+                dir = curLoc.directionTo(toAttack);
+                prevTarget = toAttack;
+            }
+            
+            lastRefresh = 0;
+
+            break;
         }
 
-        // Also try to move randomly.
-        Direction dir = directions[rng.nextInt(directions.length)];
         if (rc.canMove(dir)) {
             rc.move(dir);
         }
