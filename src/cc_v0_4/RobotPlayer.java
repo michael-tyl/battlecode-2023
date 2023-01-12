@@ -138,7 +138,6 @@ public strictfp class RobotPlayer {
         // Collections.shuffle(stkDir);
         while (true) {
             turnCount += 1;
-            anchor_cooldown--;
             try {
                 MapLocation newLoc = rc.getLocation();
                 newLoc = newLoc.add(Direction.WEST);
@@ -147,6 +146,7 @@ public strictfp class RobotPlayer {
                 newLoc = newLoc.add(Direction.SOUTH);
                 newLoc = newLoc.add(Direction.SOUTH);
                 newLoc = newLoc.add(Direction.SOUTH);
+                anchor_cooldown--;
                 if (anchor_cooldown <= 49 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
                     rc.setIndicatorString("Trying to build an anchor");
                     if (rc.canBuildAnchor(Anchor.ACCELERATING)) {
@@ -297,10 +297,18 @@ public strictfp class RobotPlayer {
                         }
                         else {
                             int[] islands = rc.senseNearbyIslands();
-                            if(islands.length >= 1) {
-                                int idx = islands[0];
+
+                            int curid = 0;
+                            for(; curid < islands.length; curid++)
+                            {
+                                if(rc.senseTeamOccupyingIsland(islands[curid]) == Team.NEUTRAL)
+                                    break;
+                            }
+
+                            if(curid < islands.length) {
+                                int idx = islands[curid];
                                 MapLocation[] goIsland = rc.senseNearbyIslandLocations(idx);
-                                MapLocation goToLoc = goIsland[0];
+                                MapLocation goToLoc = goIsland[curid];
 
                                 normalDir = me.directionTo(goToLoc);
 
