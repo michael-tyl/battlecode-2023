@@ -1,3 +1,7 @@
+###### Player ######
+src/*.zip
+**/.DS_Store
+
 ###### BATTLECODE ######
 
 /matches
