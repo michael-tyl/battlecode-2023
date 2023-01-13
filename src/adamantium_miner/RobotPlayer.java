@@ -102,7 +102,9 @@ public strictfp class RobotPlayer {
                     }
                 }
             }   
-        } 
+        }
+        //found no well 
+        if(dist == 1000000000) return null;
         //marks all cells adjacent to well
         int wx = well.x, wy = well.y;
         int size = 1;
@@ -183,11 +185,6 @@ public strictfp class RobotPlayer {
             cur = par[cur.x][cur.y];
         }
         path.add(size);
-        System.out.println(Clock.getBytecodesLeft());
-        System.out.println(path.size() - 1);
-        String str = "";
-        for(int i : path) str += String.valueOf(i) + " ";
-        System.out.println(str);
         return path;
     }
 
@@ -197,26 +194,36 @@ public strictfp class RobotPlayer {
      */
     static void runHeadquarters(RobotController rc) throws GameActionException {
         ArrayList<Integer> moves = findConveyerBelt(rc);
-        int cnt = 0;
+        int fixedCarrierCnt = 0; //number of fixed carriers to spawn
+        int fixedCarrierIndex = 0; //index to assign fixed carrier id
         if(moves != null){
-            cnt = moves.get(moves.size() - 1);
+            while(((rc.readSharedArray(fixedCarrierIndex) >> 2) & 1) == 1){
+                int parse = rc.readSharedArray(++fixedCarrierIndex);
+                while(((parse >> 4) & 1) == 1){
+                    parse = rc.readSharedArray(++fixedCarrierIndex);
+                }
+                fixedCarrierIndex++;
+            }
+            rc.writeSharedArray(fixedCarrierIndex, rc.getID()/2 - 1 + 4);
+            fixedCarrierCnt = moves.get(moves.size() - 1);
             moves.remove(moves.size() - 1);
-            for(int i = 1; i < moves.size() - 1; i++) rc.writeSharedArray(i, moves.get(i) + 16);
-            rc.writeSharedArray(moves.size() - 1, moves.get(moves.size() - 1));
+            for(int i = 1; i < moves.size() - 1; i++) rc.writeSharedArray(fixedCarrierIndex + i, moves.get(i) + 16);
+            rc.writeSharedArray(fixedCarrierIndex + moves.size() - 1, moves.get(moves.size() - 1));
         }
         while(true){
-            if(cnt > 0 && rc.canBuildRobot(RobotType.CARRIER, rc.getLocation().add(directions[moves.get(0)]))){
-                rc.writeSharedArray(0, 1);
+            if(fixedCarrierCnt > 0 && rc.canBuildRobot(RobotType.CARRIER, rc.getLocation().add(directions[moves.get(0)]))){
+                int x = rc.readSharedArray(fixedCarrierIndex);
+                rc.writeSharedArray(fixedCarrierIndex, x + 8);
                 rc.buildRobot(RobotType.CARRIER, rc.getLocation().add(directions[moves.get(0)]));
-                cnt--;
+                fixedCarrierCnt--;
             }
             Clock.yield();
         }
     }
 
-    static void fixedCarrier(RobotController rc) throws GameActionException {        
-        ArrayList<Direction> moves = new ArrayList<Direction>();
-        int index = 1;
+    static void fixedCarrier(RobotController rc, int readIndex) throws GameActionException {        
+        ArrayList<Direction> moves = new ArrayList<Direction>(); 
+        int index = readIndex + 1;
         int stop = -2;
         int cur = 0;
         int parse = rc.readSharedArray(index);
@@ -231,10 +238,6 @@ public strictfp class RobotPlayer {
         if(((parse >> 3) & 1) == 1){
             stop = index - 1;
         }
-        String str = "";
-        for(Direction i : moves) str += String.valueOf(dirIndex(i)) + " ";
-        System.out.println(str);
-        System.out.println(stop);
         ArrayList<Direction> insideMoves = new ArrayList<Direction>();
         boolean first = false;
         int inside = -1;
@@ -308,9 +311,6 @@ public strictfp class RobotPlayer {
                         }
                         insideMoves.add(curPos.directionTo(well));
                         insideMoves.add(moves.get(cur + 1));
-                        str = "";
-                        for(Direction i : insideMoves) str += String.valueOf(dirIndex(i)) + " ";
-                        System.out.println(str);
                         first = true;
                     }
                     inside = 0;
@@ -363,11 +363,26 @@ public strictfp class RobotPlayer {
      * Run a single turn for a Carrier.
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
-    static void runCarrier(RobotController rc) throws GameActionException {
-        int job = rc.readSharedArray(0);
-        rc.writeSharedArray(0, job ^ (job & 3));
-        if((job & 3) == 1){
-            fixedCarrier(rc);
+    static void runCarrier(RobotController rc) throws GameActionException { 
+        int hq = -1; 
+        for(int i = 0; i < 8; i++){
+            RobotInfo nxt = rc.senseRobotAtLocation(rc.getLocation().add(directions[i]));
+            if(nxt != null && nxt.getType() == RobotType.HEADQUARTERS){
+                hq = nxt.getID();
+            }
+        }
+        int readIndex = 0;
+        while((rc.readSharedArray(readIndex) & 3) != hq/2 - 1){
+            int parse = rc.readSharedArray(++readIndex);
+            while(((parse >> 4) & 1) == 1){
+                parse = rc.readSharedArray(++readIndex);
+            }
+            readIndex++;
+        }
+        int job = rc.readSharedArray(readIndex);
+        rc.writeSharedArray(readIndex, job & 3);
+        if(((job >> 3) & 1) == 1){
+            fixedCarrier(rc, readIndex);
         } else {
 
         } 
