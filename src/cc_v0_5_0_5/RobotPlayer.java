@@ -51,7 +51,6 @@ public strictfp class RobotPlayer {
 
     static final int SPRAY_MODE_ROUND = 10; // first 10 rounds spray carriers
     
-    static char carrierType = 'f';
     // 'c' - close resource carrier
     // 'f' - far resource carrier
     // 'a' - anchor carrier
@@ -313,26 +312,6 @@ public strictfp class RobotPlayer {
                 
     }
 
-    // runs resource carrier code for wells within sight of hq
-    static void runCloseResourceCarrier(RobotController rc) {
-        // while (true) {
-        //     turnCount += 1;
-        //     try {
-                
-        //     } catch (GameActionException e) {
-        //         System.out.println(rc.getType() + " Exception");
-        //         e.printStackTrace();
-
-        //     } catch (Exception e) {
-        //         System.out.println(rc.getType() + " Exception");
-        //         e.printStackTrace();
-
-        //     } finally {
-        //         Clock.yield();
-        //     }
-        // }
-    }
-
     static void runHeadquartersAlt(RobotController rc) throws GameActionException {
         ArrayList<Direction> stkDir = new ArrayList<Direction>();
         for (int i = 0; i < directions.length; i++) {
@@ -563,30 +542,8 @@ public strictfp class RobotPlayer {
         }
     }
 
-    // runs resource carrier code for wells outside of sight of hq
-    static void runFarResourceCarrier(RobotController rc) throws GameActionException {
-        int hq = -1; 
-        for(int i = 0; i < 8; i++){
-            RobotInfo nxt = rc.senseRobotAtLocation(rc.getLocation().add(directions[i]));
-            if(nxt != null && nxt.getType() == RobotType.HEADQUARTERS){
-                hq = nxt.getID();
-            }
-        }
-        int readIndex = 0;
-        while((rc.readSharedArray(readIndex) & 3) != hq/2 - 1){
-            int parse = rc.readSharedArray(++readIndex);
-            while(((parse >> 4) & 1) == 1){
-                parse = rc.readSharedArray(++readIndex);
-            }
-            readIndex++;
-        }
-        int job = rc.readSharedArray(readIndex);
-        rc.writeSharedArray(readIndex, job & 3);
-        if(((job >> 3) & 1) == 1){
-            fixedCarrier(rc, readIndex);
-        } else {
-
-        } 
+    // runs resource carrier code for wells inside of sight of hq
+    static void runCloseResourceCarrier(RobotController rc) throws GameActionException { 
     }
 
     // runs resource carrier code for wells outside of sight of hq
@@ -817,22 +774,43 @@ public strictfp class RobotPlayer {
     }
 
     static void runCarrier(RobotController rc) throws GameActionException {
-
-        if (rc.canTakeAnchor(hqLoc, Anchor.ACCELERATING)) {
-            rc.takeAnchor(hqLoc, Anchor.ACCELERATING);
-            carrierType = 'a';
-        } else if (rc.canTakeAnchor(hqLoc, Anchor.STANDARD)) {
-            rc.takeAnchor(hqLoc, Anchor.STANDARD);
-            carrierType = 'a';
-        } else if (rc.getMapHeight() == 30) {
-            carrierType = 'd';
+        int hq = -1; 
+        for(int i = 0; i < 8; i++){
+            RobotInfo nxt = rc.senseRobotAtLocation(rc.getLocation().add(directions[i]));
+            if(nxt != null && nxt.getType() == RobotType.HEADQUARTERS){
+                hq = nxt.getID();
+            }
         }
+        int readIndex = 0;
+        while((rc.readSharedArray(readIndex) & 3) != hq/2 - 1){
+            int parse = rc.readSharedArray(++readIndex);
+            while(((parse >> 4) & 1) == 1){
+                parse = rc.readSharedArray(++readIndex);
+            }
+            readIndex++;
+        }
+        int job = rc.readSharedArray(readIndex);
+        rc.writeSharedArray(readIndex, job & 3);
+        if(((job >> 3) & 1) == 1){
+            fixedCarrier(rc, readIndex);
+        } else {
+            char carrierType = 'f';
+            if (rc.canTakeAnchor(hqLoc, Anchor.ACCELERATING)) {
+                rc.takeAnchor(hqLoc, Anchor.ACCELERATING);
+                carrierType = 'a';
+            } else if (rc.canTakeAnchor(hqLoc, Anchor.STANDARD)) {
+                rc.takeAnchor(hqLoc, Anchor.STANDARD);
+                carrierType = 'a';
+            } else if (rc.getMapHeight() == 30) {
+                carrierType = 'd';
+            }
 
-        switch (carrierType) {
-        case 'c': runCloseResourceCarrier(rc); break;
-        case 'f': runFarResourceCarrier(rc); break;
-        case 'a': runAnchorCarrier(rc); break;
-        case 'd': runDustinResourceCarrier(rc); break;
+            switch (carrierType) {
+            case 'c': runCloseResourceCarrier(rc); break;
+            case 'a': runAnchorCarrier(rc); break;
+            case 'd': runDustinResourceCarrier(rc); break;
+            case 'f': break;
+            }
         }
     }
 
