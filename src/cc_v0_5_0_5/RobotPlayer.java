@@ -361,11 +361,11 @@ public strictfp class RobotPlayer {
                 if (!anchorBuilt){ 
                     for (int i = 0; i < stkDir.size(); i++) {
                         MapLocation newLoc = rc.getLocation().add(stkDir.get(i));
-                        if ((numFriendlies < 99 || carrierOverride) && rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                        if ((numFriendlies < 14 || carrierOverride) && rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
                             rc.setIndicatorString("Trying to build a carrier");
                             rc.buildRobot(RobotType.CARRIER, newLoc);
                             carrierOverride = false;
-                        } else if (numFriendlies < 99 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
+                        } else if (numFriendlies < 18 && turnCount < 1750 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
                             rc.setIndicatorString("Trying to build a laucher");
                             rc.buildRobot(RobotType.LAUNCHER, newLoc);
                         }
