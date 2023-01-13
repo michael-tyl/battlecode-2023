@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
+import java.lang.Math;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -34,6 +35,7 @@ public strictfp class RobotPlayer {
      */
     static final Random rng = new Random(6147);
 
+    /** MAP INFO */
     static MapLocation enemyHQ = null;
 
     /** CARRIER STATIC VARS */
@@ -49,6 +51,9 @@ public strictfp class RobotPlayer {
 
     // Count number of turns since last prevTarget refresh
     static short lastRefresh = 0;
+
+    static boolean active = false;
+    static int moveCount = 0;
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -88,14 +93,21 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
             try {
+
                 // Set enemy HQ loc
                 if (enemyHQ == null) {
-                    if (rc.getType() == RobotType.HEADQUARTERS) {
-                        MapLocation hqLoc = rc.getLocation();
-
-                    } else {
+                    MapLocation hqLoc = rc.getLocation();
+                    if (rc.getType() != RobotType.HEADQUARTERS) {
                         RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam());
+                        for (int i = 0; i < friendlies.length; i++) {
+                            if (friendlies[i].getType() == RobotType.HEADQUARTERS) {
+                                hqLoc = friendlies[i].getLocation();
+                                break;
+                            }
+                        }
                     }
+
+                    enemyHQ = new MapLocation(Math.abs(rc.getMapWidth() - 1 - hqLoc.x), Math.abs(rc.getMapHeight() - 1 - hqLoc.y));
                 }
 
                 // The same run() function is called for every robot on your team, even if they are
@@ -338,8 +350,8 @@ public strictfp class RobotPlayer {
 
         MapLocation curLoc = rc.getLocation();
 
-        // Also try to move randomly.
-        Direction dir = directions[rng.nextInt(directions.length)];
+        // Leave null for now
+        Direction dir = null;
 
         // Move towards previous target, if available
         if (prevTarget != null) {
@@ -382,24 +394,43 @@ public strictfp class RobotPlayer {
 
             break;
         }
+
+        // Try moving towards enemy HQ
+        if (dir == null) {
+            dir = curLoc.directionTo(enemyHQ);
+            int i = 0;
+            while (!rc.canMove(dir) && i < 20) {
+                dir = directions[rng.nextInt(directions.length)];
+                i++;
+            }
+        }
         
         // TODO: Better criteria than lowest ID
-        // Current form is worse than v0.3
-        // boolean leader = true;
+        // Current form is worse than v0.3, currently not used to set direction
+        boolean leader = true;
 
         // MapLocation centerMass = rc.getLocation();
-        // for (int i = 0; i < friendlies.length; i++) {
-        //     if (friendlies[i].getType() != RobotType.LAUNCHER) continue;
-        //     if (friendlies[i].getID() < rc.getID()) leader = false;
-        //     centerMass = centerMass.add(curLoc.directionTo(friendlies[i].getLocation()));
-        // }
+        int launcherCount = 0;
+        for (int i = 0; i < friendlies.length; i++) {
+            if (friendlies[i].getType() != RobotType.LAUNCHER) continue;
+            launcherCount++;
+            // Activate in groups of at least x size
+            if (launcherCount >= 3) {
+                active = true;
+                rc.setIndicatorString("Active!");
+            }
+            // if (friendlies[i].getID() < rc.getID()) leader = false;
+            // centerMass = centerMass.add(curLoc.directionTo(friendlies[i].getLocation()));
+        }
 
         // if (!leader && !chase) {
         //     dir = curLoc.directionTo(centerMass);
         // }
 
-        if (rc.canMove(dir)) {
+        // Move 3 times to prevent crowding HQ
+        if ((moveCount < 3 || active || rc.senseMapInfo(curLoc).hasCloud()) && rc.canMove(dir)) {
             rc.move(dir);
+            moveCount++;
         }
     }
 }

@@ -34,6 +34,9 @@ public strictfp class RobotPlayer {
      */
     static final Random rng = new Random(6147);
 
+    /** MAP INFO */
+    static MapLocation enemyHQ = null;
+
     /** HQ STATIC VARS */
     static int anchor_cooldown = 50; // How many turns until next anchor can be made
 
@@ -52,6 +55,9 @@ public strictfp class RobotPlayer {
 
     // Count number of turns since last prevTarget refresh
     static short lastRefresh = 0;
+
+    static boolean active = false;
+    static int moveCount = 0;
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -91,6 +97,22 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
             try {
+                // Set enemy HQ loc
+                if (enemyHQ == null) {
+                    MapLocation hqLoc = rc.getLocation();
+                    if (rc.getType() != RobotType.HEADQUARTERS) {
+                        RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam());
+                        for (int i = 0; i < friendlies.length; i++) {
+                            if (friendlies[i].getType() == RobotType.HEADQUARTERS) {
+                                hqLoc = friendlies[i].getLocation();
+                                break;
+                            }
+                        }
+                    }
+
+                    enemyHQ = new MapLocation(Math.abs(rc.getMapWidth() - 1 - hqLoc.x), Math.abs(rc.getMapHeight() - 1 - hqLoc.y));
+                }
+
                 // The same run() function is called for every robot on your team, even if they are
                 // different types. Here, we separate the control depending on the RobotType, so we can
                 // use different strategies on different robots. If you wish, you are free to rewrite
@@ -133,57 +155,36 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runHeadquarters(RobotController rc) throws GameActionException {
-        // ArrayList<Direction> stkDir = new ArrayList<Direction>();
-        // for (int i = 0; i < directions.length; i++) {
-        //     stkDir.add(directions[i]);
-        // }
-        // Collections.shuffle(stkDir);
+        ArrayList<Direction> stkDir = new ArrayList<Direction>();
+        for (int i = 0; i < directions.length; i++) {
+            stkDir.add(directions[i]);
+        }
+        Collections.shuffle(stkDir);
+        int ind = 0;
         while (true) {
             turnCount += 1;
             try {
-                MapLocation newLoc = rc.getLocation();
-                newLoc = newLoc.add(Direction.WEST);
-                newLoc = newLoc.add(Direction.WEST);
-                newLoc = newLoc.add(Direction.WEST);
-                newLoc = newLoc.add(Direction.SOUTH);
-                newLoc = newLoc.add(Direction.SOUTH);
-                newLoc = newLoc.add(Direction.SOUTH);
-                anchor_cooldown--;
-                if (anchor_cooldown <= 49 && anchors_built < 2 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
+                MapLocation newLoc = rc.getLocation().add(stkDir.get(ind));
+
+                if(rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
                     rc.setIndicatorString("Trying to build an anchor");
-                    if (rc.canBuildAnchor(Anchor.ACCELERATING)) {
-                        anchors_built++;
+                    if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
                         rc.buildAnchor(Anchor.ACCELERATING);
-                        anchor_cooldown = 50;
-                    } else if (rc.canBuildAnchor(Anchor.STANDARD)) {
-                        anchors_built++;
+                    }
+                    else if(rc.canBuildAnchor(Anchor.STANDARD)){
                         rc.buildAnchor(Anchor.STANDARD);
-                        anchor_cooldown = 50;
                     }
-                } 
-                for (int dx = -3; dx <= 3; dx++) {
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    for (int dy = -3; dy <= 3; dy++) {
-                        if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
-                            rc.setIndicatorString("Trying to build a carrier");
-                            rc.buildRobot(RobotType.CARRIER, newLoc);
-                            break;
-                            // ind++;
-                        } else if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
-                            rc.setIndicatorString("Trying to build a laucher");
-                            rc.buildRobot(RobotType.LAUNCHER, newLoc);
-                            break;
-                        }
-                        newLoc = newLoc.add(Direction.NORTH);
-                    }
-                    newLoc = newLoc.add(Direction.EAST);
                 }
-                // MapLocation newLoc = rc.getLocation().add(stkDir.get(ind));
+
+                rc.setIndicatorString("Trying to build a carrier");
+                if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                    rc.buildRobot(RobotType.CARRIER, newLoc);
+                    ind++;
+                } else {
+                    rc.setIndicatorString("Trying to build a launcher");
+                    if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) 
+                        rc.buildRobot(RobotType.LAUNCHER, newLoc);
+                }
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
@@ -391,15 +392,16 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runLauncher(RobotController rc) throws GameActionException {
-        // Try to attack someone
         int radius = rc.getType().actionRadiusSquared;
+        int vision = rc.getType().visionRadiusSquared;
         Team opponent = rc.getTeam().opponent();
         RobotInfo[] enemies = rc.senseNearbyRobots(radius, opponent);
+        RobotInfo[] friendlies = rc.senseNearbyRobots(vision, rc.getTeam());
 
         MapLocation curLoc = rc.getLocation();
 
-        // Also try to move randomly.
-        Direction dir = directions[rng.nextInt(directions.length)];
+        // Leave null for now
+        Direction dir = null;
 
         // Move towards previous target, if available
         if (prevTarget != null) {
@@ -410,6 +412,7 @@ public strictfp class RobotPlayer {
             prevTarget = null;
         }
 
+        boolean chase = false;
         int curEnemy = 0;
         // Make sure not attacking HQ
         while (curEnemy < enemies.length) {
@@ -433,6 +436,7 @@ public strictfp class RobotPlayer {
                 dir = directions[rng.nextInt(directions.length)];
             } else {
                 dir = curLoc.directionTo(toAttack);
+                chase = true;
                 prevTarget = toAttack;
             }
 
@@ -441,8 +445,42 @@ public strictfp class RobotPlayer {
             break;
         }
 
-        if (rc.canMove(dir)) {
+        // Try moving towards enemy HQ
+        if (dir == null) {
+            dir = curLoc.directionTo(enemyHQ);
+            int i = 0;
+            while (!rc.canMove(dir) && i < 20) {
+                dir = directions[rng.nextInt(directions.length)];
+                i++;
+            }
+        }
+        
+        // TODO: Better criteria than lowest ID
+        // Current form is worse than v0.3, currently not used to set direction
+        boolean leader = true;
+
+        // MapLocation centerMass = rc.getLocation();
+        int launcherCount = 0;
+        for (int i = 0; i < friendlies.length; i++) {
+            if (friendlies[i].getType() != RobotType.LAUNCHER) continue;
+            launcherCount++;
+            // Activate in groups of at least x size
+            if (launcherCount >= 3) {
+                active = true;
+                rc.setIndicatorString("Active!");
+            }
+            // if (friendlies[i].getID() < rc.getID()) leader = false;
+            // centerMass = centerMass.add(curLoc.directionTo(friendlies[i].getLocation()));
+        }
+
+        // if (!leader && !chase) {
+        //     dir = curLoc.directionTo(centerMass);
+        // }
+
+        // Move 3 times to prevent crowding HQ
+        if ((moveCount < 3 || active || rc.senseMapInfo(curLoc).hasCloud()) && rc.canMove(dir)) {
             rc.move(dir);
+            moveCount++;
         }
     }
 }
