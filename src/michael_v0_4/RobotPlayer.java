@@ -34,6 +34,8 @@ public strictfp class RobotPlayer {
      */
     static final Random rng = new Random(6147);
 
+    static MapLocation enemyHQ = null;
+
     /** CARRIER STATIC VARS */
     static final int MAX_CAPACITY = 40; // capcity of carriers
 
@@ -86,6 +88,16 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
             try {
+                // Set enemy HQ loc
+                if (enemyHQ == null) {
+                    if (rc.getType() == RobotType.HEADQUARTERS) {
+                        MapLocation hqLoc = rc.getLocation();
+
+                    } else {
+                        RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam());
+                    }
+                }
+
                 // The same run() function is called for every robot on your team, even if they are
                 // different types. Here, we separate the control depending on the RobotType, so we can
                 // use different strategies on different robots. If you wish, you are free to rewrite
@@ -316,11 +328,13 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runLauncher(RobotController rc) throws GameActionException {
+
         // Try to attack someone
         int radius = rc.getType().actionRadiusSquared;
+        int vision = rc.getType().visionRadiusSquared;
         Team opponent = rc.getTeam().opponent();
         RobotInfo[] enemies = rc.senseNearbyRobots(radius, opponent);
-        RobotInfo[] friendlies = rc.senseNearbyRobots(radius, rc.getTeam());
+        RobotInfo[] friendlies = rc.senseNearbyRobots(vision, rc.getTeam());
 
         MapLocation curLoc = rc.getLocation();
 
