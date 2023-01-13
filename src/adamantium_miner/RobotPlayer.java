@@ -316,7 +316,7 @@ public strictfp class RobotPlayer {
                                     cnt++;
                                 }
                             }
-                            if(i != dirIndex(well.directionTo(out)) && i != dirIndex(well.directionTo(curPos)) && cnt > 0){
+                            if(valid[i] && i != dirIndex(well.directionTo(out)) && i != dirIndex(well.directionTo(curPos)) && cnt > 0){
                                 nodes[valcnt++] = x;
                             }
                         }
@@ -395,9 +395,9 @@ public strictfp class RobotPlayer {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
             } finally {
-                if(moved == 0 || (!rc.isMovementReady() && !rc.isActionReady())){
+                //if(moved == 0 || (!rc.isMovementReady() && !rc.isActionReady())){
                     Clock.yield();
-                }
+                //}
             }
         }
     }
