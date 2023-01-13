@@ -113,7 +113,7 @@ public strictfp class RobotPlayer {
             MapLocation nxt = well.add(directions[i]);
             if(rc.canSenseLocation(nxt) && type[nxt.x][nxt.y] != 0){
                 type[nxt.x][nxt.y] = 2;
-                //size++;
+                size++;
             }
         }
         MapLocation q[] = new MapLocation[cnt];
@@ -176,7 +176,7 @@ public strictfp class RobotPlayer {
             }
         }
         //figure out how many robots to allocate optimally
-        size += path.size();
+        //size += path.size() - 1;
         //only found one path
         if(q[l - 1].equals(q[0]) || type[q[l - 1].x][q[l - 1].y] != 2){
             path.add(1);
@@ -253,6 +253,20 @@ public strictfp class RobotPlayer {
             try {
                 if(rc.isActionReady()){
                     MapLocation pos = rc.getLocation();
+                    if(rc.getResourceAmount(ResourceType.ADAMANTIUM) + rc.getResourceAmount(ResourceType.MANA) + rc.getResourceAmount(ResourceType.ELIXIR) >= 20){
+                        boolean found = false;
+                        RobotInfo targets[] = rc.senseNearbyRobots();
+                        for(int i = 0; i < targets.length; i++){
+                            if(targets[i].getTeam() != rc.getTeam()){
+                                if(rc.canAttack(targets[i].getLocation())){
+                                    rc.attack(targets[i].getLocation());
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if(found) continue;
+                    }
                     if(rc.canCollectResource(pos, -1)){
                         rc.collectResource(pos, -1);
                         moved++;
@@ -286,42 +300,66 @@ public strictfp class RobotPlayer {
                     if(!first){
                         MapLocation curPos = rc.getLocation();
                         MapLocation well = curPos.add(moves.get(cur));
-                        int out = dirIndex(well.directionTo(well.add(moves.get(cur + 1))));
+                        MapLocation out = well.add(moves.get(cur + 1));
                         boolean valid[] = new boolean[8];
                         for(int i = 0; i < 8; i++){
                             valid[i] = rc.sensePassability(well.add(directions[i]));
                         }
+                        MapLocation nodes[] = new MapLocation[9];
+                        int valcnt = 0;
+                        nodes[valcnt++] = well;
                         for(int i = 0; i < 8; i++){
                             int cnt = 0;
+                            MapLocation x = well.add(directions[i]);
                             for(int j = 0; j < 8; j++){
-                                if(!valid[j] && well.add(directions[i]).isAdjacentTo(well.add(directions[j]))){
+                                if(valid[j] && x.isAdjacentTo(well.add(directions[j]))){
                                     cnt++;
                                 }
                             }
-                            if(cnt == 0){
-                                valid[i] = false;
+                            if(i != dirIndex(well.directionTo(out)) && i != dirIndex(well.directionTo(curPos)) && cnt > 0){
+                                nodes[valcnt++] = x;
                             }
                         }
-                        valid[dirIndex(well.directionTo(rc.getLocation()))] = false;
-                        valid[out] = false;
-                        boolean canMove = true;
-                        while(canMove){
-                            canMove = false;
-                            for(int i = 0; i < 8; i++){
-                                if(valid[i]){
-                                    if(curPos.isAdjacentTo(well.add(directions[i]))){
-                                        Direction nxt = curPos.directionTo(well.add(directions[i]));
-                                        valid[i] = false;
-                                        insideMoves.add(nxt);
-                                        curPos = curPos.add(nxt);
-                                        canMove = true;
-                                        break;
+                        int dp[][] = new int[1 << valcnt][valcnt];
+                        int par[][] = new int[1 << valcnt][valcnt];
+                        for(int i = 0; i < (1 << valcnt); i++){
+                            int bitCnt = 0;
+                            for(int j = 0; j < valcnt; j++) bitCnt += (i >> j) & 1;
+                            for(int j = 0; j < valcnt; j++){
+                                if((i & (1 << j)) > 0){
+                                    if(bitCnt == 1 && out.isAdjacentTo(nodes[j])){
+                                        dp[i][j] = -1;
+                                        par[i][j] = -1;
+                                    }
+                                    if(dp[i][j] == 0) continue;
+                                    for(int k = 0; k < valcnt; k++){
+                                        if((i & (1 << k)) == 0 && nodes[j].isAdjacentTo(nodes[k])){
+                                            dp[i ^ (1 << k)][k] = j + 1;
+                                            par[i ^ (1 << k)][k] = i;
+                                        }
                                     }
                                 }
                             }
                         }
-                        insideMoves.add(curPos.directionTo(well));
-                        insideMoves.add(moves.get(cur + 1));
+                        boolean found = false;
+                        for(int i = (1 << valcnt) - 1; i >= 0; i--){
+                            for(int j = 0; j < valcnt; j++){
+                                if(dp[i][j] != 0 && curPos.isAdjacentTo(nodes[j])){
+                                    found = true;
+                                    int x = i, y = j;
+                                    while(y != -2){
+                                        insideMoves.add(curPos.directionTo(nodes[y]));
+                                        curPos = nodes[y];
+                                        int x1 = x;
+                                        x = par[x][y];
+                                        y = dp[x1][y] - 1;
+                                    }
+                                    insideMoves.add(curPos.directionTo(out));
+                                    break;
+                                }
+                            }
+                            if(found) break;
+                        }
                         first = true;
                     }
                     inside = 0;
@@ -342,7 +380,7 @@ public strictfp class RobotPlayer {
                     }
                 } else {
                     if(stop == -2 && rc.senseWell(rc.getLocation()) != null && rc.getResourceAmount(ResourceType.ADAMANTIUM) + rc.getResourceAmount(ResourceType.MANA) + rc.getResourceAmount(ResourceType.ELIXIR) < 40){
-                        //do nothing, picking up resources
+                        continue;
                     } else if(rc.canMove(moves.get(cur))){
                         rc.move(moves.get(cur));
                         moved++;
@@ -353,7 +391,6 @@ public strictfp class RobotPlayer {
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
-
             } catch (Exception e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
