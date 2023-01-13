@@ -176,10 +176,10 @@ public strictfp class RobotPlayer {
             }
         }
         //figure out how many robots to allocate optimally
-        //size += path.size();
+        size += path.size();
         //only found one path
         if(q[l - 1].equals(q[0]) || type[q[l - 1].x][q[l - 1].y] != 2){
-            path.add(size);
+            path.add(1);
             return path;
         }
         //retrive second path
@@ -236,13 +236,13 @@ public strictfp class RobotPlayer {
         while(((parse >> 4) & 1) == 1){
             moves.add(directions[parse & 7]);
             if(((parse >> 3) & 1) == 1){
-                stop = index - 1;
+                stop = index - readIndex - 1;
             }
             parse = rc.readSharedArray(++index);
         }
         moves.add(directions[parse & 7]);
         if(((parse >> 3) & 1) == 1){
-            stop = index - 1;
+            stop = index - readIndex - 1;
         }
         ArrayList<Direction> insideMoves = new ArrayList<Direction>();
         boolean first = false;
@@ -253,33 +253,34 @@ public strictfp class RobotPlayer {
             try {
                 if(rc.isActionReady()){
                     MapLocation pos = rc.getLocation();
-                    for(int i = 0; i < 8; i++){
-                        MapLocation nxt = pos.add(directions[i]);
-                        if(rc.canSenseRobotAtLocation(nxt) && rc.senseRobotAtLocation(nxt).type == RobotType.HEADQUARTERS && rc.getResourceAmount(ResourceType.ADAMANTIUM) > 0){
-                            rc.transferResource(nxt, ResourceType.ADAMANTIUM, rc.getResourceAmount(ResourceType.ADAMANTIUM));
-                            moved++;
-                            break;
-                        }
-                        if(rc.canSenseRobotAtLocation(nxt) && rc.senseRobotAtLocation(nxt).type == RobotType.HEADQUARTERS && rc.getResourceAmount(ResourceType.MANA) > 0){
-                            rc.transferResource(nxt, ResourceType.MANA, rc.getResourceAmount(ResourceType.MANA));
-                            moved++;
-                            break;
-                        }
-                        if(rc.canSenseRobotAtLocation(nxt) && rc.senseRobotAtLocation(nxt).type == RobotType.HEADQUARTERS && rc.getResourceAmount(ResourceType.ELIXIR) > 0){
-                            rc.transferResource(nxt, ResourceType.ELIXIR, rc.getResourceAmount(ResourceType.ELIXIR));
-                            moved++;
-                            break;
-                        }
-                        if(rc.canCollectResource(nxt, -1)){
-                            rc.collectResource(nxt, -1);
-                            moved++;
-                            break;
-                        }
-                    }
                     if(rc.canCollectResource(pos, -1)){
                         rc.collectResource(pos, -1);
                         moved++;
-                    }
+                    } else {
+                        for(int i = 0; i < 8; i++){
+                            MapLocation nxt = pos.add(directions[i]);
+                            if(rc.canSenseRobotAtLocation(nxt) && rc.senseRobotAtLocation(nxt).type == RobotType.HEADQUARTERS && rc.getResourceAmount(ResourceType.ADAMANTIUM) > 0){
+                                rc.transferResource(nxt, ResourceType.ADAMANTIUM, rc.getResourceAmount(ResourceType.ADAMANTIUM));
+                                moved++;
+                                break;
+                            }
+                            if(rc.canSenseRobotAtLocation(nxt) && rc.senseRobotAtLocation(nxt).type == RobotType.HEADQUARTERS && rc.getResourceAmount(ResourceType.MANA) > 0){
+                                rc.transferResource(nxt, ResourceType.MANA, rc.getResourceAmount(ResourceType.MANA));
+                                moved++;
+                                break;
+                            }
+                            if(rc.canSenseRobotAtLocation(nxt) && rc.senseRobotAtLocation(nxt).type == RobotType.HEADQUARTERS && rc.getResourceAmount(ResourceType.ELIXIR) > 0){
+                                rc.transferResource(nxt, ResourceType.ELIXIR, rc.getResourceAmount(ResourceType.ELIXIR));
+                                moved++;
+                                break;
+                            }
+                            if(rc.canCollectResource(nxt, -1)){
+                                rc.collectResource(nxt, -1);
+                                moved++;
+                                break;
+                            }
+                        }
+                    } 
                 }
                 if(cur == stop + 1){
                     if(!first){
@@ -331,7 +332,6 @@ public strictfp class RobotPlayer {
                     if(inside == insideMoves.size()){
                         if(rc.getResourceAmount(ResourceType.ADAMANTIUM) + rc.getResourceAmount(ResourceType.MANA) + rc.getResourceAmount(ResourceType.ELIXIR) >= 34){
                             inside = -1;
-                            continue;
                         }
                     } else {
                         if(rc.canMove(insideMoves.get(inside))){
@@ -341,12 +341,9 @@ public strictfp class RobotPlayer {
                         }
                     }
                 } else {
-                    if(stop == -2 && rc.senseWell(rc.getLocation()) != null){
-                        if(rc.getResourceAmount(ResourceType.ADAMANTIUM) + rc.getResourceAmount(ResourceType.MANA) + rc.getResourceAmount(ResourceType.ELIXIR) < 40){
-                            continue;
-                        }
-                    }
-                    if(rc.canMove(moves.get(cur))){
+                    if(stop == -2 && rc.senseWell(rc.getLocation()) != null && rc.getResourceAmount(ResourceType.ADAMANTIUM) + rc.getResourceAmount(ResourceType.MANA) + rc.getResourceAmount(ResourceType.ELIXIR) < 40){
+                        //do nothing, picking up resources
+                    } else if(rc.canMove(moves.get(cur))){
                         rc.move(moves.get(cur));
                         moved++;
                         cur++;
