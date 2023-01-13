@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
+import java.lang.Math;
 
 /**
  * RobotPlayer is the class that describes your main robot strategy.
@@ -34,6 +35,7 @@ public strictfp class RobotPlayer {
      */
     static final Random rng = new Random(6147);
 
+    /** MAP INFO */
     static MapLocation enemyHQ = null;
 
     /** CARRIER STATIC VARS */
@@ -88,14 +90,21 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
             try {
+                
                 // Set enemy HQ loc
                 if (enemyHQ == null) {
-                    if (rc.getType() == RobotType.HEADQUARTERS) {
-                        MapLocation hqLoc = rc.getLocation();
-
-                    } else {
+                    MapLocation hqLoc = rc.getLocation();
+                    if (rc.getType() != RobotType.HEADQUARTERS) {
                         RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam());
+                        for (int i = 0; i < friendlies.length; i++) {
+                            if (friendlies[i].getType() == RobotType.HEADQUARTERS) {
+                                hqLoc = friendlies[i].getLocation();
+                                break;
+                            }
+                        }
                     }
+
+                    enemyHQ = new MapLocation(Math.abs(rc.getMapWidth() - 1 - hqLoc.x), Math.abs(rc.getMapHeight() - 1 - hqLoc.y));
                 }
 
                 // The same run() function is called for every robot on your team, even if they are
