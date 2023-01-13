@@ -1,4 +1,4 @@
-package michael_v0_4;
+package cc_v0_4_1;
 
 import battlecode.common.*;
 
@@ -34,7 +34,10 @@ public strictfp class RobotPlayer {
      */
     static final Random rng = new Random(6147);
 
-    static MapLocation enemyHQ = null;
+    /** HQ STATIC VARS */
+    static int anchor_cooldown = 50; // How many turns until next anchor can be made
+
+    static int anchors_built = 0; // Track how many anchors have been made
 
     /** CARRIER STATIC VARS */
     static final int MAX_CAPACITY = 40; // capcity of carriers
@@ -88,16 +91,6 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode.
             try {
-                // Set enemy HQ loc
-                if (enemyHQ == null) {
-                    if (rc.getType() == RobotType.HEADQUARTERS) {
-                        MapLocation hqLoc = rc.getLocation();
-
-                    } else {
-                        RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam());
-                    }
-                }
-
                 // The same run() function is called for every robot on your team, even if they are
                 // different types. Here, we separate the control depending on the RobotType, so we can
                 // use different strategies on different robots. If you wish, you are free to rewrite
@@ -155,6 +148,19 @@ public strictfp class RobotPlayer {
                 newLoc = newLoc.add(Direction.SOUTH);
                 newLoc = newLoc.add(Direction.SOUTH);
                 newLoc = newLoc.add(Direction.SOUTH);
+                anchor_cooldown--;
+                if (anchor_cooldown <= 49 && anchors_built < 2 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
+                    rc.setIndicatorString("Trying to build an anchor");
+                    if (rc.canBuildAnchor(Anchor.ACCELERATING)) {
+                        anchors_built++;
+                        rc.buildAnchor(Anchor.ACCELERATING);
+                        anchor_cooldown = 50;
+                    } else if (rc.canBuildAnchor(Anchor.STANDARD)) {
+                        anchors_built++;
+                        rc.buildAnchor(Anchor.STANDARD);
+                        anchor_cooldown = 50;
+                    }
+                } 
                 for (int dx = -3; dx <= 3; dx++) {
                     newLoc = newLoc.add(Direction.SOUTH);
                     newLoc = newLoc.add(Direction.SOUTH);
@@ -197,6 +203,7 @@ public strictfp class RobotPlayer {
      */
     static void runCarrier(RobotController rc) throws GameActionException {
         boolean movingBack = false;                                         // finished harvesting, returning to hq
+        boolean claimIsland = false;
         Stack<Direction> moveList = new Stack<Direction>();         // list of directions
         Direction normalDir = Direction.CENTER;                             // direction robot is "trying" to go in
         MapLocation hqPosition = new MapLocation(0, 0);
@@ -240,28 +247,43 @@ public strictfp class RobotPlayer {
                     moveList.clear();
                 }
 
-                if (rc.getWeight() == MAX_CAPACITY)
+
+                if (rc.getWeight() == MAX_CAPACITY &&
+                        rc.getNumAnchors(Anchor.STANDARD) == 0 &&
+                        rc.getNumAnchors(Anchor.ACCELERATING) == 0)
                     movingBack = true;
 
                 MapLocation me = rc.getLocation();
-                // Harvest if possible
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dy = -1; dy <= 1; dy++) {
-                        MapLocation wellLocation = new MapLocation(me.x + dx, me.y + dy);
-                        if (rc.canCollectResource(wellLocation, -1)) {
-                            rc.collectResource(wellLocation, -1);
-                            rc.setIndicatorString("Collecting, now have, AD:" + 
-                                rc.getResourceAmount(ResourceType.ADAMANTIUM) + 
-                                " MN: " + rc.getResourceAmount(ResourceType.MANA) + 
-                                " EX: " + rc.getResourceAmount(ResourceType.ELIXIR));
-                            willMove = false;
+
+                if(rc.canTakeAnchor(hqPosition, Anchor.ACCELERATING)) {
+                    claimIsland = true;
+                    rc.takeAnchor(hqPosition, Anchor.ACCELERATING);
+                }
+                if(rc.canTakeAnchor(hqPosition, Anchor.STANDARD)) {
+                    claimIsland = true;
+                    rc.takeAnchor(hqPosition, Anchor.STANDARD);
+                }
+
+                if(!claimIsland){
+                    // Harvest if possible
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            MapLocation wellLocation = new MapLocation(me.x + dx, me.y + dy);
+                            if (rc.canCollectResource(wellLocation, -1)) {
+                                rc.collectResource(wellLocation, -1);
+                                rc.setIndicatorString("Collecting, now have, AD:" +
+                                    rc.getResourceAmount(ResourceType.ADAMANTIUM) +
+                                    " MN: " + rc.getResourceAmount(ResourceType.MANA) +
+                                    " EX: " + rc.getResourceAmount(ResourceType.ELIXIR));
+                                willMove = false;
+                            }
                         }
                     }
                 }
 
                 if (rc.getWeight() == 0)
                     movingBack = false;
-                
+
                 if (willMove) {
                     if (movingBack) {
                         Direction dir = moveList.peek().opposite();
@@ -271,6 +293,47 @@ public strictfp class RobotPlayer {
                             rc.setIndicatorString("moving back");
                         } else {
                             rc.setIndicatorString("unable to move back");
+                        }
+                    } else if(claimIsland) {
+                        if(rc.canPlaceAnchor()) {
+                            rc.placeAnchor();
+                            claimIsland = false;
+                        }
+                        else {
+                            int[] islands = rc.senseNearbyIslands();
+
+                            int curid = 0;
+                            for(; curid < islands.length; curid++)
+                            {
+                                if(rc.senseTeamOccupyingIsland(islands[curid]) == Team.NEUTRAL)
+                                    break;
+                            }
+
+                            if(curid < islands.length) {
+                                int idx = islands[curid];
+                                MapLocation[] goIsland = rc.senseNearbyIslandLocations(idx);
+                                MapLocation goToLoc = goIsland[curid];
+
+                                normalDir = me.directionTo(goToLoc);
+
+                                if (rc.canMove(normalDir)) {
+                                    rc.move(normalDir);
+                                    moveList.push(normalDir);
+                                    rc.setIndicatorString("move towards island");
+                                } else {
+                                    while (!rc.canMove(normalDir))
+                                        normalDir = normalDir.rotateRight();
+                                    rc.move(normalDir);
+                                    moveList.push(normalDir);
+                                    rc.setIndicatorString(normalDir.name() + " | move in normal direction");
+                                }
+                            } else {
+                                while (!rc.canMove(normalDir))
+                                    normalDir = normalDir.rotateRight();
+                                rc.move(normalDir);
+                                moveList.push(normalDir);
+                                rc.setIndicatorString(normalDir.name() + " | move in normal direction");
+                            }
                         }
                     } else {
                         // Attempt to move towards well
@@ -328,13 +391,10 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runLauncher(RobotController rc) throws GameActionException {
-
         // Try to attack someone
         int radius = rc.getType().actionRadiusSquared;
-        int vision = rc.getType().visionRadiusSquared;
         Team opponent = rc.getTeam().opponent();
         RobotInfo[] enemies = rc.senseNearbyRobots(radius, opponent);
-        RobotInfo[] friendlies = rc.senseNearbyRobots(vision, rc.getTeam());
 
         MapLocation curLoc = rc.getLocation();
 
@@ -350,7 +410,6 @@ public strictfp class RobotPlayer {
             prevTarget = null;
         }
 
-        boolean chase = false;
         int curEnemy = 0;
         // Make sure not attacking HQ
         while (curEnemy < enemies.length) {
@@ -374,7 +433,6 @@ public strictfp class RobotPlayer {
                 dir = directions[rng.nextInt(directions.length)];
             } else {
                 dir = curLoc.directionTo(toAttack);
-                chase = true;
                 prevTarget = toAttack;
             }
 
@@ -382,21 +440,6 @@ public strictfp class RobotPlayer {
 
             break;
         }
-        
-        // TODO: Better criteria than lowest ID
-        // Current form is worse than v0.3
-        // boolean leader = true;
-
-        // MapLocation centerMass = rc.getLocation();
-        // for (int i = 0; i < friendlies.length; i++) {
-        //     if (friendlies[i].getType() != RobotType.LAUNCHER) continue;
-        //     if (friendlies[i].getID() < rc.getID()) leader = false;
-        //     centerMass = centerMass.add(curLoc.directionTo(friendlies[i].getLocation()));
-        // }
-
-        // if (!leader && !chase) {
-        //     dir = curLoc.directionTo(centerMass);
-        // }
 
         if (rc.canMove(dir)) {
             rc.move(dir);
