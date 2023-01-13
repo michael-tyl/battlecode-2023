@@ -1,4 +1,4 @@
-package cc_v0_4_2;
+package cc_v0_4_4;
 
 import battlecode.common.*;
 
@@ -83,57 +83,27 @@ public strictfp class RobotPlayer {
      * This code is wrapped inside the infinite loop in run(), so it is called once per turn.
      */
     static void runHeadquarters(RobotController rc) throws GameActionException {
-        // ArrayList<Direction> stkDir = new ArrayList<Direction>();
-        // for (int i = 0; i < directions.length; i++) {
-        //     stkDir.add(directions[i]);
-        // }
-        // Collections.shuffle(stkDir);
+        ArrayList<Direction> stkDir = new ArrayList<Direction>();
+        for (int i = 0; i < directions.length; i++) {
+            stkDir.add(directions[i]);
+        }
+        Collections.shuffle(stkDir);
+        int ind = 0;
         while (true) {
             turnCount += 1;
             try {
-                MapLocation newLoc = rc.getLocation();
-                newLoc = newLoc.add(Direction.WEST);
-                newLoc = newLoc.add(Direction.WEST);
-                newLoc = newLoc.add(Direction.WEST);
-                newLoc = newLoc.add(Direction.SOUTH);
-                newLoc = newLoc.add(Direction.SOUTH);
-                newLoc = newLoc.add(Direction.SOUTH);
-                anchor_cooldown--;
-                if (anchor_cooldown <= 49 && anchors_built < 2 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
-                    rc.setIndicatorString("Trying to build an anchor");
-                    if (rc.canBuildAnchor(Anchor.ACCELERATING)) {
-                        anchors_built++;
-                        rc.buildAnchor(Anchor.ACCELERATING);
-                        anchor_cooldown = 50;
-                    } else if (rc.canBuildAnchor(Anchor.STANDARD)) {
-                        anchors_built++;
-                        rc.buildAnchor(Anchor.STANDARD);
-                        anchor_cooldown = 50;
+                MapLocation newLoc = rc.getLocation().add(stkDir.get(ind));
+                if (true) {
+                    rc.setIndicatorString("Trying to build a carrier");
+                    if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                        rc.buildRobot(RobotType.CARRIER, newLoc);
+                        ind++;
                     }
-                } 
-                for (int dx = -3; dx <= 3; dx++) {
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    newLoc = newLoc.add(Direction.SOUTH);
-                    for (int dy = -3; dy <= 3; dy++) {
-                        if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
-                            rc.setIndicatorString("Trying to build a carrier");
-                            rc.buildRobot(RobotType.CARRIER, newLoc);
-                            break;
-                            // ind++;
-                        } else if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
-                            rc.setIndicatorString("Trying to build a laucher");
-                            rc.buildRobot(RobotType.LAUNCHER, newLoc);
-                            break;
-                        }
-                        newLoc = newLoc.add(Direction.NORTH);
-                    }
-                    newLoc = newLoc.add(Direction.EAST);
+                } else {
+                    rc.setIndicatorString("Trying to build a laucher");
+                    if (rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) 
+                        rc.buildRobot(RobotType.LAUNCHER, newLoc);
                 }
-                // MapLocation newLoc = rc.getLocation().add(stkDir.get(ind));
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
@@ -213,12 +183,14 @@ public strictfp class RobotPlayer {
                 if (rc.getWeight() == MAX_CAPACITY)
                     movingBack = true;
 
+                boolean harvesting = false;
                 MapLocation me = rc.getLocation();
                 // Harvest if possible
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dy = -1; dy <= 1; dy++) {
                         MapLocation wellLocation = new MapLocation(me.x + dx, me.y + dy);
                         if (rc.canCollectResource(wellLocation, -1)) {
+                            harvesting = true;
                             rc.collectResource(wellLocation, -1);
                             rc.setIndicatorString("Collecting, now have, AD:" + 
                                 rc.getResourceAmount(ResourceType.ADAMANTIUM) + 
@@ -230,7 +202,8 @@ public strictfp class RobotPlayer {
 
                 if (rc.getWeight() == 0)
                     movingBack = false;
-                
+                if (harvesting)
+                    continue;
                 if (movingBack) {
                     Direction dir = moveList.peek().opposite();
                     if (rc.canMove(dir)) {
