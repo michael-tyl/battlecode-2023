@@ -126,7 +126,7 @@ public strictfp class RobotPlayer {
         vis[hx][hy] = true;
         while(l < r){
             l++;
-            if(type[q[l - 1].x][q[l - 1].y] == 2) break;
+            if(!q[l - 1].equals(q[0]) && type[q[l - 1].x][q[l - 1].y] == 2) break;
             for(int i = 0; i < 8; i++){
                 MapLocation nxt = q[l - 1].add(directions[(st - 1 + i + 7)%8]);
                 if(rc.canSenseLocation(nxt) && type[nxt.x][nxt.y] != 0 && !vis[nxt.x][nxt.y]){
@@ -137,7 +137,7 @@ public strictfp class RobotPlayer {
             }
         }
         //found no paths
-        if(type[q[l - 1].x][q[l - 1].y] != 2) return null;
+        if(q[l - 1].equals(q[0]) || type[q[l - 1].x][q[l - 1].y] != 2) return null;
         //retrieve one path on the bfs and mark all visited nodes
         MapLocation cur = q[l - 1];
         ArrayList<Integer> path = new ArrayList<Integer>();
@@ -150,6 +150,12 @@ public strictfp class RobotPlayer {
         //reverse path to make order correct
         Collections.reverse(path);
         //last element of first part should be marked
+        if(path.size() == 1){
+            path.add(dirIndex(q[l - 1].directionTo(well)));
+            path.add(dirIndex(well.directionTo(q[l - 1])));
+            path.add(1);
+            return path;
+        }
         path.set(path.size() - 1, path.get(path.size() - 1) + 8);
         //add extra stuff for the bot to compute path
         path.add(dirIndex(q[l - 1].directionTo(well)));
@@ -159,7 +165,7 @@ public strictfp class RobotPlayer {
         q[0] = rc.getLocation().add(directions[path.get(0)]);
         while(l < r){
             l++;
-            if(type[q[l - 1].x][q[l - 1].y] == 2) break;
+            if(!q[l - 1].equals(q[0]) && type[q[l - 1].x][q[l - 1].y] == 2) break;
             for(int i = 0; i < 8; i++){
                 MapLocation nxt = q[l - 1].add(directions[(st - 1 + i + 7)%8]);
                 if(rc.canSenseLocation(nxt) && type[nxt.x][nxt.y] != 0 && !vis[nxt.x][nxt.y]){
@@ -172,7 +178,7 @@ public strictfp class RobotPlayer {
         //figure out how many robots to allocate optimally
         //size += path.size();
         //only found one path
-        if(type[q[l - 1].x][q[l - 1].y] != 2){
+        if(q[l - 1].equals(q[0]) || type[q[l - 1].x][q[l - 1].y] != 2){
             path.add(size);
             return path;
         }
@@ -270,13 +276,17 @@ public strictfp class RobotPlayer {
                             break;
                         }
                     }
+                    if(rc.canCollectResource(pos, -1)){
+                        rc.collectResource(pos, -1);
+                        moved++;
+                    }
                 }
                 if(cur == stop + 1){
                     if(!first){
                         MapLocation curPos = rc.getLocation();
                         MapLocation well = curPos.add(moves.get(cur));
                         int out = dirIndex(well.directionTo(well.add(moves.get(cur + 1))));
-                        boolean valid[] = new boolean[8];;
+                        boolean valid[] = new boolean[8];
                         for(int i = 0; i < 8; i++){
                             valid[i] = rc.sensePassability(well.add(directions[i]));
                         }
@@ -350,11 +360,10 @@ public strictfp class RobotPlayer {
             } catch (Exception e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
-
             } finally {
-                //if(moved == 0 || (!rc.isMovementReady() && !rc.isActionReady())){
+                if(moved == 0 || (!rc.isMovementReady() && !rc.isActionReady())){
                     Clock.yield();
-                //}
+                }
             }
         }
     }
