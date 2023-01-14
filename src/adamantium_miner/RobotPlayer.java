@@ -368,7 +368,7 @@ public strictfp class RobotPlayer {
                 }
                 if(inside != -1){
                     if(inside == insideMoves.size()){
-                        if(rc.getResourceAmount(ResourceType.ADAMANTIUM) + rc.getResourceAmount(ResourceType.MANA) + rc.getResourceAmount(ResourceType.ELIXIR) >= 34){
+                        if(rc.getResourceAmount(ResourceType.ADAMANTIUM) + rc.getResourceAmount(ResourceType.MANA) + rc.getResourceAmount(ResourceType.ELIXIR) >= 40){
                             inside = -1;
                         }
                     } else {
