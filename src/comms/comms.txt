@@ -37,6 +37,21 @@ static private class Comms {
         return ret;
     }
 
+    //Returns array of headquarters stored in the shared data
+    static MapLocation[] getHqs(RobotController rc) throws GameActionException {
+        int cur = 0;
+        for(int i = 0; i < 4; i++) if(getPos(rc, i) > 0) cur++;
+        MapLocation ret[] = new MapLocation[cur];
+        cur = 0;
+        for(int i = 0; i < 4; i++){
+            int x = getPos(rc, i);
+            if(x > 0){
+                ret[cur++] = new MapLocation((x - 1)/60, (x - 1)%60);
+            }
+        }
+        return ret;
+    }
+
     //Adds a well to the shared data
     static void addWell(RobotController rc, int v) throws GameActionException {
         int cur = 0;
@@ -46,6 +61,16 @@ static private class Comms {
         }
         if(cur == wellCap) return;
         setPos(rc, cur, v);
+    }
+
+    //Checks if a well exists in the data
+    static boolean wellExists(RobotController rc, int v) throws GameActionException {
+        int cur = 0;
+        while(getPos(rc, 4 + cur) > 0){
+            if(getPos(rc, 4 + cur) == v) return true;
+            cur++;
+        }
+        return false;
     }
 
     //Gets the job of the robot at spawn

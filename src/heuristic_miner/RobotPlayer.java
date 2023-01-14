@@ -60,6 +60,21 @@ public strictfp class RobotPlayer {
             return ret;
         }
 
+        //Returns array of headquarters stored in the shared data
+        static MapLocation[] getHqs(RobotController rc) throws GameActionException {
+            int cur = 0;
+            for(int i = 0; i < 4; i++) if(getPos(rc, i) > 0) cur++;
+            MapLocation ret[] = new MapLocation[cur];
+            cur = 0;
+            for(int i = 0; i < 4; i++){
+                int x = getPos(rc, i);
+                if(x > 0){
+                    ret[cur++] = new MapLocation((x - 1)/60, (x - 1)%60);
+                }
+            }
+            return ret;
+        }
+
         //Adds a well to the shared data
         static void addWell(RobotController rc, int v) throws GameActionException {
             int cur = 0;
@@ -69,6 +84,16 @@ public strictfp class RobotPlayer {
             }
             if(cur == wellCap) return;
             setPos(rc, cur, v);
+        }
+
+        //Checks if a well exists in the data
+        static boolean wellExists(RobotController rc, int v) throws GameActionException {
+            int cur = 0;
+            while(getPos(rc, 4 + cur) > 0){
+                if(getPos(rc, 4 + cur) == v) return true;
+                cur++;
+            }
+            return false;
         }
 
         //Gets the job of the robot at spawn
@@ -124,18 +149,21 @@ public strictfp class RobotPlayer {
         int myId = rc.getID()/2 - 1;
         int myX = rc.getLocation().x, myY = rc.getLocation().y;
         WellInfo wells[] = rc.senseNearbyWells();
+        for(int i = 0; i < wells.length; i++){
+            MapLocation loc = wells[i].getMapLocation();
+            Comms.addWell(rc, Comms.hashPos(loc.x, loc.y));
+        }
         Comms.setPos(rc, myId, Comms.hashPos(myX, myY));
-        int numSpawned = 0;
+        int numScouts = 2;
         while(true){
             try {
-                if (numSpawned >= 2)
-                    continue;
+                if(numScouts == 0) continue;
                 MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
                 rc.setIndicatorString("Trying to build a carrier");
-                if (rc.canBuildRobot(RobotType.CARRIER, newLoc) && Comms.canSpawn(rc, myId)) {
+                if(rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc) && Comms.canSpawn(rc, myId)) {
                     Comms.setJob(rc, myId, 1);
                     rc.buildRobot(RobotType.CARRIER, newLoc);
-                    numSpawned++;
+                    numScouts--;
                 }
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
@@ -153,12 +181,16 @@ public strictfp class RobotPlayer {
     static void runCarrier(RobotController rc) throws GameActionException { 
         int job = Comms.getJob(rc);
         System.out.println("Job: " + job);
-        //Scout
-        if(job == 1){
+        if(job == 1){ //Scout
             runScout(rc);
-        } else {
-
+        } else if(job == 2){ //Resource collector
+            runResourceCollector(rc);
         } 
+    }
+
+    static void runResourceCollector(RobotController rc) throws GameActionException{
+        MapLocation wells[] = Comms.getWells(rc);
+        MapLocation hqs[] = Comms.getHqs(rc);
     }
 
     static boolean checkAcrossWall(MapLocation position, Direction wallDirection, MapLocation target) {
@@ -174,7 +206,6 @@ public strictfp class RobotPlayer {
         }
         return false;
     }
-
     
     static void runScout(RobotController rc) throws GameActionException {
         boolean isScout = true;
@@ -209,16 +240,18 @@ public strictfp class RobotPlayer {
                 if (isScout) {
                     WellInfo[] nearbyWells = rc.senseNearbyWells();
                     for (int i = 0; i < nearbyWells.length; i++) {
-                        if (nearbyWells[i].getResourceType() != ResourceType.ADAMANTIUM ) {
+                        MapLocation loc = nearbyWells[i].getMapLocation();
+                        if (!Comms.wellExists(rc, Comms.hashPos(loc.x, loc.y))) {
                             scoutedWellInfo = nearbyWells[i];
                             movingBack = true;
                             target = hqPosition;
-                            System.out.println("found mana well, returning now");
+                            rc.setIndicatorString("found mana well, returning now");
                             break;
                         }
                     }
                     
                     if (movingBack) {
+                        // System.out.println("already found well, moving back");
                         for (int moves = 0; moves < 2; moves++) {
                             if (!rc.isMovementReady())
                                 continue;
@@ -434,7 +467,7 @@ public strictfp class RobotPlayer {
                         }
                     }
                 } else {
-                    // resource collection suff
+                    break;
                 }
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
@@ -448,5 +481,6 @@ public strictfp class RobotPlayer {
                 Clock.yield();
             }
         }
+        runResourceCollector(rc);
     }
 }
