@@ -18,7 +18,7 @@ public strictfp class RobotPlayer {
 
     static int turnCount = 0;
 
-    static final Random rng = new Random(61473);
+    static final Random rng = new Random(61474);
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -99,7 +99,7 @@ public strictfp class RobotPlayer {
             turnCount += 1;
             try {
                 // NOTE: Only moves once per turn, may need modifications for optimal performance on carriers
-
+                
                 if (!rc.isMovementReady())
                     continue;
 

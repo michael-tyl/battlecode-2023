@@ -1,4 +1,4 @@
-package resourcefindingplayer;
+package scout_v0;
 
 import battlecode.common.*;
 
