@@ -18,7 +18,7 @@ public strictfp class RobotPlayer {
 
     static int turnCount = 0;
 
-    static final Random rng = new Random(61472);
+    static final Random rng = new Random(61473);
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -44,14 +44,16 @@ public strictfp class RobotPlayer {
     }
 
     static void runHeadquarters(RobotController rc) throws GameActionException {
+        int numSpawned = 0;
         while (true) {
             turnCount += 1;
             try {
-                if (turnCount != 1)
+                if (numSpawned >= 1)
                     continue;
                 Direction dir = directions[rng.nextInt(directions.length)];
                 MapLocation newLoc = rc.getLocation().add(dir);
                 if (rc.canBuildRobot(RobotType.AMPLIFIER, newLoc)) {
+                    numSpawned++;
                     rc.buildRobot(RobotType.AMPLIFIER, newLoc);
                 }
             } catch (GameActionException e) {
@@ -82,7 +84,7 @@ public strictfp class RobotPlayer {
 
     static void runAmplifier(RobotController rc) throws GameActionException {
         boolean pause = true; 
-        MapLocation target;
+        MapLocation target = null;
         boolean trackingObstacle = false;
         Direction movingDirection = Direction.CENTER; 
         boolean traversingClockwise = false;
@@ -105,7 +107,7 @@ public strictfp class RobotPlayer {
                 if (pause) {
                     target = new MapLocation(rng.nextInt(rc.getMapWidth()), rng.nextInt(rc.getMapHeight()));            
                     pause = false;
-                } else if (rc.getLocation().equals(target)) {
+                } else if (rc.getLocation().isAdjacentTo(target)) {
                     rc.setIndicatorString("reached target locaton at " + target.toString());
                     pause = true;
                     continue;
