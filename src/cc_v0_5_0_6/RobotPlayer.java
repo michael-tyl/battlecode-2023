@@ -286,6 +286,11 @@ public strictfp class RobotPlayer {
             // Only spawn if not surrounded
             int enemyCount = countEnemyLaunchers(rc);
             if (countEnemyLaunchers(rc) - numFriendlies < 4) {
+                int curVal = rc.readSharedArray(63);
+                int flip = 1 << (rc.getID() / 2 - 1);
+                if ((curVal & flip) == 1) {
+                    rc.writeSharedArray(63, curVal ^ flip);
+                }
                 if(numFriendlies > 5 && anchors_built < 10 && anchor_cooldown < 25 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
                     rc.setIndicatorString("Trying to build an anchor" + numFriendlies);
                     if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
@@ -322,6 +327,8 @@ public strictfp class RobotPlayer {
                 }
 
             } else {
+                int curVal = rc.readSharedArray(63);
+                rc.writeSharedArray(63, curVal | (1 << (rc.getID() / 2 - 1)));
                 rc.setIndicatorString("Disabled " + enemyCount);
             }
             Clock.yield();
