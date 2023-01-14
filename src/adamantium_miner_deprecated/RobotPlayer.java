@@ -1,4 +1,4 @@
-package comms;
+package adamantium_miner_deprecated;
 
 import battlecode.common.*;
 

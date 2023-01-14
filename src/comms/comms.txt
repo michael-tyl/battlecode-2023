@@ -1,0 +1,73 @@
+static private class Comms {
+
+    static final int wellCap = 13;
+
+    //Sets the position stored at ind to v
+    static void setPos(RobotController rc, int ind, int v) throws GameActionException{
+        int x = rc.readSharedArray(ind);
+        rc.writeSharedArray(ind, ((x >> 11) << 11) + v);
+    }
+
+    //Gets the position stored at ind
+    static int getPos(RobotController rc, int ind) throws GameActionException{
+        int x = rc.readSharedArray(ind);
+        return x & ((1 << 12) - 1);
+    }
+
+    //Hashes (x, y) into an int
+    static int hashPos(int x, int y){
+        return x*60 + y + 1;
+    } 
+
+    //Sets the job stored at ind to v [0, 15]
+    static void setJob(RobotController rc, int ind, int v) throws GameActionException {
+        int x = rc.readSharedArray(ind);
+        rc.writeSharedArray(ind, (x & ((1 << 12) - 1)) + (v << 12));
+    }
+
+    //Returns array of wells stored in the shared data
+    static MapLocation[] getWells(RobotController rc) throws GameActionException {
+        int cur = 0;
+        while(getPos(rc, 4 + cur) > 0) cur++;
+        MapLocation ret[] = new MapLocation[cur];
+        for(int i = 0; i < cur; i++){
+            int x = getPos(rc, 4 + cur);
+            ret[i] = new MapLocation((x - 1)/60, (x - 1)%60);
+        }
+        return ret;
+    }
+
+    //Adds a well to the shared data
+    static void addWell(RobotController rc, int v) throws GameActionException {
+        int cur = 0;
+        while(getPos(rc, 4 + cur) > 0){
+            if(getPos(rc, 4 + cur) == v) return;
+            cur++;
+        }
+        if(cur == wellCap) return;
+        setPos(rc, cur, v);
+    }
+
+    //Gets the job of the robot at spawn
+    static int getJob(RobotController rc) throws GameActionException {
+        int ret = -1; 
+        int ind = -1;
+        for(int i = 2; i <= 9; i++){
+            if(rc.canSenseRobot(i)){
+                int x = rc.readSharedArray(i/2 - 1);
+                if((x >> 12) > 0){
+                    ret = x >> 12;
+                    ind = i;
+                }
+            }
+        }
+        if(ind != -1) setJob(rc, ind/2 - 1, 0);
+        return ret;
+    }
+
+    //Check if a headquarters can spawn a bot without overriding current job
+    static boolean canSpawn(RobotController rc, int ind) throws GameActionException {
+        int x = rc.readSharedArray(ind);
+        return (x >> 12) == 0;
+    }
+}
