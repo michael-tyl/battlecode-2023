@@ -69,12 +69,6 @@ public strictfp class RobotPlayer {
 
     static int turnCount = 0;
 
-    static final int MAX_CAPACITY = 40; // capcity of carriers
-
-    static final int FARMING_ROUND_LENGTH = 100; // first 100 rounds are used for farming
-
-    static final int SPRAY_MODE_ROUND = 10; // first 10 rounds spray carriers
-
     static final Random rng = new Random(6147);
 
     static final Direction[] directions = {
