@@ -1,18 +1,25 @@
-package scout_v1;
+package heuristic_miner;
+
 
 import battlecode.common.*;
 
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
+import java.math.*;
 
 public strictfp class RobotPlayer {
+
+    static final Random rng = new Random(6147);
+
+    static final Direction[] directions = {
+        Direction.NORTH,
+        Direction.NORTHEAST,
+        Direction.EAST,
+        Direction.SOUTHEAST,
+        Direction.SOUTH,
+        Direction.SOUTHWEST,
+        Direction.WEST,
+        Direction.NORTHWEST,
+    }; 
 
     static private class Comms {
 
@@ -21,7 +28,7 @@ public strictfp class RobotPlayer {
         //Sets the position stored at ind to v
         static void setPos(RobotController rc, int ind, int v) throws GameActionException{
             int x = rc.readSharedArray(ind);
-            rc.writeSharedArray(ind, (x & ((1 << 16) - 1) ^ ((1 << 12) - 1)) + v);
+            rc.writeSharedArray(ind, ((x >> 11) << 11) + v);
         }
 
         //Gets the position stored at ind
@@ -38,7 +45,7 @@ public strictfp class RobotPlayer {
         //Sets the job stored at ind to v [0, 15]
         static void setJob(RobotController rc, int ind, int v) throws GameActionException {
             int x = rc.readSharedArray(ind);
-            rc.writeSharedArray(ind, (x & ((1 << 12) - 1)) + (v << 11));
+            rc.writeSharedArray(ind, (x & ((1 << 12) - 1)) + (v << 12));
         }
 
         //Returns array of wells stored in the shared data
@@ -67,51 +74,66 @@ public strictfp class RobotPlayer {
         //Gets the job of the robot at spawn
         static int getJob(RobotController rc) throws GameActionException {
             int ret = -1; 
+            int ind = -1;
             for(int i = 2; i <= 9; i++){
                 if(rc.canSenseRobot(i)){
                     int x = rc.readSharedArray(i/2 - 1);
-                    if(x > 0) ret = x;
+                    if((x >> 12) > 0){
+                        ret = x >> 12;
+                        ind = i;
+                    }
                 }
             }
-            return ret/2 - 1;
+            if(ind != -1) setJob(rc, ind/2 - 1, 0);
+            return ret;
+        }
+
+        //Check if a headquarters can spawn a bot without overriding current job
+        static boolean canSpawn(RobotController rc, int ind) throws GameActionException {
+            int x = rc.readSharedArray(ind);
+            return (x >> 12) == 0;
         }
     }
-
-    static int turnCount = 0;
-
-    static final Random rng = new Random(6147);
-
-    static final Direction[] directions = {
-        Direction.NORTH,
-        Direction.NORTHEAST,
-        Direction.EAST,
-        Direction.SOUTHEAST,
-        Direction.SOUTH,
-        Direction.SOUTHWEST,
-        Direction.WEST,
-        Direction.NORTHWEST,
-    };
 
     @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
-        switch (rc.getType()) {
-        case HEADQUARTERS: runHeadquarters(rc); break;
-        case CARRIER: runCarrier(rc); break;
-        default: break;
+
+        switch (rc.getType()){
+            case HEADQUARTERS: runHeadquarters(rc); break;
+            case CARRIER: runCarrier(rc); break;
         }
+
+        return;
     }
 
-    
+    static int dirIndex(Direction dir){
+        switch(dir){
+            case NORTH: return 0;
+            case NORTHEAST: return 1;
+            case EAST: return 2;
+            case SOUTHEAST: return 3;
+            case SOUTH: return 4;
+            case SOUTHWEST: return 5;
+            case WEST: return 6;
+            case NORTHWEST: return 7;
+            default: return -1;
+        }
+    } 
+
     static void runHeadquarters(RobotController rc) throws GameActionException {
+        int myId = rc.getID()/2 - 1;
+        int myX = rc.getLocation().x, myY = rc.getLocation().y;
+        WellInfo wells[] = rc.senseNearbyWells();
+        Comms.setPos(rc, myId, Comms.hashPos(myX, myY));
         int numSpawned = 0;
-        while (true) {
-            turnCount += 1;
+        while(true){
             try {
                 if (numSpawned >= 2)
                     continue;
                 MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
                 rc.setIndicatorString("Trying to build a carrier");
-                if (rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                if (rc.canBuildRobot(RobotType.CARRIER, newLoc) && Comms.canSpawn(rc, myId)) {
+                    Comms.setJob(rc, myId, 1);
                     rc.buildRobot(RobotType.CARRIER, newLoc);
                     numSpawned++;
                 }
@@ -126,6 +148,17 @@ public strictfp class RobotPlayer {
                 Clock.yield();
             }
         }
+    }
+
+    static void runCarrier(RobotController rc) throws GameActionException { 
+        int job = Comms.getJob(rc);
+        System.out.println("Job: " + job);
+        //Scout
+        if(job == 1){
+            runScout(rc);
+        } else {
+
+        } 
     }
 
     static boolean checkAcrossWall(MapLocation position, Direction wallDirection, MapLocation target) {
@@ -143,7 +176,7 @@ public strictfp class RobotPlayer {
     }
 
     
-    static void runCarrier(RobotController rc) throws GameActionException {
+    static void runScout(RobotController rc) throws GameActionException {
         boolean isScout = true;
 
         boolean movingBack = false; 
@@ -172,7 +205,6 @@ public strictfp class RobotPlayer {
         boolean traversingClockwise = false;
 
         while (true) {
-            turnCount += 1;
             try {
                 if (isScout) {
                     WellInfo[] nearbyWells = rc.senseNearbyWells();

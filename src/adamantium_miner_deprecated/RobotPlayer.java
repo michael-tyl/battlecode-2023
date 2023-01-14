@@ -1,4 +1,4 @@
-package comms;
+package adamantium_miner_deprecated;
 
 import battlecode.common.*;
 
@@ -249,7 +249,9 @@ public strictfp class RobotPlayer {
             tar = wells[i].getMapLocation();
             for(int j = 0; j < 8; j++){
                 int x = tar.add(directions[j]).x - shiftX, y = tar.add(directions[j]).y - shiftY;
-                if(0 <= x && x < diameter && 0 <= y && y < diameter) type[x][y] = 0;
+                if(0 <= x && x < diameter && 0 <= y && y < diameter){
+                    type[x][y] = 0;
+                }
             }
             ret[i][ind] = -2;
         }
@@ -405,9 +407,9 @@ public strictfp class RobotPlayer {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
             } finally {
-                //if(moved == 0 || (!rc.isMovementReady() && !rc.isActionReady())){
+                if(moved == 0 || (!rc.isMovementReady() && !rc.isActionReady())){
                     Clock.yield();
-                //}
+                }
             }
         }
     }
