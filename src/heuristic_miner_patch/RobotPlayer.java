@@ -93,6 +93,21 @@ public strictfp class RobotPlayer {
             int x = rc.readSharedArray(ind);
             return (x >> 12) == 0;
         }
+
+        //Returns array of headquarters stored in the shared data
+        static MapLocation[] getHqs(RobotController rc) throws GameActionException {
+            int cur = 0;
+            for(int i = 0; i < 4; i++) if(getPos(rc, i) > 0) cur++;
+            MapLocation ret[] = new MapLocation[cur];
+            cur = 0;
+            for(int i = 0; i < 4; i++){
+                int x = getPos(rc, i);
+                if(x > 0){
+                    ret[cur++] = new MapLocation((x - 1)/60, (x - 1)%60);
+                }
+            }
+            return ret;
+        }
     }
 
     @SuppressWarnings("unused")
@@ -204,6 +219,8 @@ public strictfp class RobotPlayer {
         Direction movingDirection = Direction.CENTER; 
         boolean traversingClockwise = false;
 
+        MapLocation[] allHqs = Comms.getHqs(rc);
+
         while (true) {
             try {
                 if (isScout) {
@@ -212,7 +229,14 @@ public strictfp class RobotPlayer {
                         if (nearbyWells[i].getResourceType() != ResourceType.ADAMANTIUM ) {
                             scoutedWellInfo = nearbyWells[i];
                             movingBack = true;
-                            target = hqPosition;
+
+                            int curDistSq = 3603;
+                            for(int curHq = 0; curHq < allHqs.length; curHq++) {
+                                if(rc.getLocation().distanceSquaredTo(allHqs[curHq]) < curDistSq) {
+                                    target = allHqs[curHq];
+                                    curDistSq = rc.getLocation().distanceSquaredTo(target);
+                                }
+                            }
                             rc.setIndicatorString("found mana well, returning now");
                             break;
                         }
@@ -224,7 +248,7 @@ public strictfp class RobotPlayer {
                             if (!rc.isMovementReady())
                                 continue;
 
-                            if (rc.getLocation().isAdjacentTo(target)) {
+                            if (rc.canSenseLocation(target)) {
                                 rc.setIndicatorString("uploaded info to global array");
                                 MapLocation wellPosition = scoutedWellInfo.getMapLocation();
                                 Comms.addWell(rc, Comms.hashPos(wellPosition.x, wellPosition.y));
