@@ -125,9 +125,14 @@ public strictfp class RobotPlayer {
         }
     }
 
-    // static boolean surrounded(RobotController rc) throws GameActionException {
-    //     RobotInfo[] enemies = rc.senseNearbyRobots(radius, opponent);
-    // }
+    static short countEnemyLaunchers(RobotController rc) throws GameActionException {
+        RobotInfo[] enemies = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam().opponent());
+        short count = 0;
+        for (int i = 0; i < enemies.length; i++) {
+            if (enemies[i].getType() == RobotType.LAUNCHER) count++;
+        }
+        return count;
+    }
 
     static ArrayList<Integer> findConveyerBelt(RobotController rc) throws GameActionException{
         int n = rc.getMapWidth(), m = rc.getMapHeight();
@@ -278,39 +283,46 @@ public strictfp class RobotPlayer {
             numFriendlies = friendlies.length;
             boolean anchorBuilt = false;
             anchor_cooldown--;
-            if(numFriendlies > 5 && anchors_built < 10 && anchor_cooldown < 25 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
-                rc.setIndicatorString("Trying to build an anchor" + numFriendlies);
-                if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
-                    rc.buildAnchor(Anchor.ACCELERATING);
-                    anchorBuilt = true;
-                }
-                else if(rc.canBuildAnchor(Anchor.STANDARD)){
-                    rc.buildAnchor(Anchor.STANDARD);
-                    anchorBuilt = true;
-                }
-            }
-            if (!anchorBuilt){ 
-                if(fixedCarrierCnt > 0 && rc.canBuildRobot(RobotType.CARRIER, rc.getLocation().add(directions[moves.get(0)]))){
-                    int x = rc.readSharedArray(fixedCarrierIndex);
-                    rc.writeSharedArray(fixedCarrierIndex, x + 8);
-                    rc.buildRobot(RobotType.CARRIER, rc.getLocation().add(directions[moves.get(0)]));
-                    fixedCarrierCnt--;
-                }
-                else for (int i = 0; i < stkDir.size(); i++) {
-                    MapLocation newLoc = rc.getLocation().add(stkDir.get(i));
-                    if (carrierOverride && rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
-                        rc.setIndicatorString("Trying to build a carrier");
-                        rc.buildRobot(RobotType.CARRIER, newLoc);
-                        carrierOverride = false;
-                    } else if (numFriendlies < 9 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
-                        rc.setIndicatorString("Trying to build a laucher");
-                        rc.buildRobot(RobotType.LAUNCHER, newLoc);
+            // Only spawn if not surrounded
+            int enemyCount = countEnemyLaunchers(rc);
+            if (countEnemyLaunchers(rc) - numFriendlies < 4) {
+                if(numFriendlies > 5 && anchors_built < 10 && anchor_cooldown < 25 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
+                    rc.setIndicatorString("Trying to build an anchor" + numFriendlies);
+                    if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
+                        rc.buildAnchor(Anchor.ACCELERATING);
+                        anchorBuilt = true;
+                    }
+                    else if(rc.canBuildAnchor(Anchor.STANDARD)){
+                        rc.buildAnchor(Anchor.STANDARD);
+                        anchorBuilt = true;
                     }
                 }
+                if (!anchorBuilt){ 
+                    if(fixedCarrierCnt > 0 && rc.canBuildRobot(RobotType.CARRIER, rc.getLocation().add(directions[moves.get(0)]))){
+                        int x = rc.readSharedArray(fixedCarrierIndex);
+                        rc.writeSharedArray(fixedCarrierIndex, x + 8);
+                        rc.buildRobot(RobotType.CARRIER, rc.getLocation().add(directions[moves.get(0)]));
+                        fixedCarrierCnt--;
+                    }
+                    else for (int i = 0; i < stkDir.size(); i++) {
+                        MapLocation newLoc = rc.getLocation().add(stkDir.get(i));
+                        if (carrierOverride && rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                            rc.setIndicatorString("Trying to build a carrier");
+                            rc.buildRobot(RobotType.CARRIER, newLoc);
+                            carrierOverride = false;
+                        } else if (numFriendlies < 9 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
+                            rc.setIndicatorString("Trying to build a laucher");
+                            rc.buildRobot(RobotType.LAUNCHER, newLoc);
+                        }
+                    }
+                } else {
+                    anchor_cooldown = 50;
+                    anchors_built++;
+                    carrierOverride = true;
+                }
+
             } else {
-                anchor_cooldown = 50;
-                anchors_built++;
-                carrierOverride = true;
+                rc.setIndicatorString("Disabled " + enemyCount);
             }
             Clock.yield();
         }
