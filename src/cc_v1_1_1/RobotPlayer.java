@@ -57,7 +57,6 @@ public strictfp class RobotPlayer {
 
     static private class Communication {
 
-
         int wellCap = 14;
         RobotController rc;
 
@@ -162,10 +161,8 @@ public strictfp class RobotPlayer {
 
         //Gets the job of the robot at spawn
         int getJob() throws GameActionException {
-            int st = 2;
-            if(rc.getTeam() == Team.A) st++;
-            for(int i = st; i <= 9; i += 2){
-                if(rc.canSenseRobot(i)){
+            for(int i = 2; i <= 9; i++){
+                if(rc.canSenseRobot(i) && rc.senseRobot(i).getTeam() == rc.getTeam()){
                     int hq = i/2 - 1;
                     int ret = getRange(12, 15, hq);
                     if(ret > 0){

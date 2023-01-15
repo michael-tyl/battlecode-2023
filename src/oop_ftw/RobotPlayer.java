@@ -166,7 +166,7 @@ public strictfp class RobotPlayer {
             comms.addWell(wells[i]);
         }
         comms.setPos(myId, rc.getLocation());
-        int miners = 16;
+        int miners = 24;
         int scouts = 8;
         int scoutCooldown = 0;
         int cur = 2;
