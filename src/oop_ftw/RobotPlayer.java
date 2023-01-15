@@ -172,7 +172,7 @@ public strictfp class RobotPlayer {
                 if(numScouts > 0){
                     MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
                     if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                        comms.addJob(myId,1);
+                        comms.addJob(myId,2);
                         rc.buildRobot(RobotType.CARRIER, newLoc);
                         numScouts--;
                     }
@@ -192,23 +192,22 @@ public strictfp class RobotPlayer {
     static void runCarrier(RobotController rc) throws GameActionException { 
         int job = comms.getJob();
         if(job == 1){ //Scout
-            TestCarrier carrier = new TestCarrier(rc);
-            carrier.run();
         } else if(job == 2){ //Resource collector adamantium
+            ResourceCarrier carrier = new ResourceCarrier(rc);
+            carrier.run(ResourceType.ADAMANTIUM);
         } else if(job == 3){ //Resource collector mana
         } else if(job == 4){ //Resource collector elixir
         }
     }
 
     //move() - does one move of pathfinding
-    //setTarget() - sets the target
     private static class Pathfinding {
 
         Direction movingDirection;
         boolean trackingObstacle;
         boolean traversingClockwise;
-        MapLocation target;
         RobotController rc;
+        MapLocation target;
 
         Pathfinding(RobotController rc_){
             rc = rc_;
@@ -218,20 +217,16 @@ public strictfp class RobotPlayer {
             target = rc.getLocation();
         }
 
-        void setTarget(MapLocation tar){
-            target = tar;
-        }
-
-        static boolean checkAcrossWall(MapLocation position, Direction wallDirection, MapLocation target) {
+        static boolean checkAcrossWall(MapLocation position, Direction wallDirection, MapLocation tar) {
             switch (wallDirection) {
             case NORTH:
-                return position.y < target.y;
+                return position.y < tar.y;
             case EAST:
-                return position.x < target.x;
+                return position.x < tar.x;
             case SOUTH:
-                return position.y > target.y;
+                return position.y > tar.y;
             case WEST:
-                return position.x > target.x;
+                return position.x > tar.x;
             }
             return false;
         }
@@ -254,7 +249,7 @@ public strictfp class RobotPlayer {
                         Direction newMovingDirection = movingDirection; 
                         // find mininmum number of turns to get to a square we can go on
                         // if the robot is surrounded, commit suicide to avoid gridlock?
-                        for(int i = 0; i < 8; i++){
+                        for (int i = 0;; i++) {
                             if(rc.canMove(movingDirection)){
                                 rc.move(movingDirection);
                                 movingDirection = newMovingDirection;
@@ -341,85 +336,7 @@ public strictfp class RobotPlayer {
                         movingDirection = optimalCardinalDirection.rotateRight().rotateRight();
                         traversingClockwise = false;
                     }
-
-                    if(traversingClockwise){
-                        if(rc.canMove(movingDirection.rotateRight())){
-                            rc.move(movingDirection.rotateRight()); 
-                            if(checkAcrossWall(currentPosition, movingDirection.opposite(), target)){
-                                movingDirection = movingDirection.rotateRight().rotateRight();
-                            } else {
-                                trackingObstacle = false;
-                                movingDirection = Direction.CENTER;
-                            }
-                        } else {
-                            Direction newMovingDirection = movingDirection;
-                            // hopefully the robot isn't trapped.....
-                            for(int i = 0;; i++){
-                                if(rc.canMove(movingDirection)){
-                                    rc.move(movingDirection);
-                                    movingDirection = newMovingDirection;
-                                    break;
-                                }
-                                movingDirection = movingDirection.rotateLeft();
-                                if(i % 2 == 1){
-                                    newMovingDirection = movingDirection;
-                                }
-                            }
-                        }
-                    } else {
-                        if(rc.canMove(movingDirection.rotateLeft())){
-                            rc.move(movingDirection.rotateLeft()); 
-                            if(checkAcrossWall(currentPosition, movingDirection.opposite(), target)){
-                                movingDirection = movingDirection.rotateLeft().rotateLeft();
-                            } else {
-                                trackingObstacle = false;
-                                movingDirection = Direction.CENTER;
-                            }
-                        } else {
-                            Direction newMovingDirection = movingDirection;
-                            // hopefully the robot isn't trapped.....
-                            for(int i = 0;; i++) {
-                                if (rc.canMove(movingDirection)) {
-                                    rc.move(movingDirection);
-                                    movingDirection = newMovingDirection;
-                                    break;
-                                }
-                                movingDirection = movingDirection.rotateRight();
-                                if (i % 2 == 1){
-                                    newMovingDirection = movingDirection;
-                                }
-                            }
-                        }
-                    }
                 }
-            }
-        }
-    }
-
-    private static class TestCarrier extends Pathfinding {
-
-        TestCarrier(RobotController rc_){
-            super(rc_);
-        }
-
-        void run() throws GameActionException {
-            MapLocation target = new MapLocation(15, 15);
-            super.setTarget(target);
-            while(true){
-                try {
-                    for(int i = 0; i < 2; i++){
-                        super.move();
-                    }
-                } catch(GameActionException e){
-                    System.out.println(rc.getType() + " Exception");
-                    e.printStackTrace();
-
-                } catch(Exception e){
-                    System.out.println(rc.getType() + " Exception");
-                    e.printStackTrace();
-                } finally {
-                    Clock.yield();
-                } 
             }
         }
     }
@@ -429,29 +346,37 @@ public strictfp class RobotPlayer {
         MapLocation wells[]; //well positions
         ResourceType wellTypes[]; //well types for each position
         MapLocation hqs[]; //hq positions
-        int prvTurn[]; //previous turn checked well
+        int prvWellVis[]; //previous turn checked well
+        int prvHqVis[];
+        boolean collecting; //collecting from well
+        boolean foundWell; //found the well
+        boolean foundHome; //found the base
+        boolean goingHome; //going home
+        int targetWellId; //target well id
+        int targetHqId; //target hq id
+        int turnCount;
+    
 
-        void updateData(){
+        void updateData() throws GameActionException{
             wells = comms.getWells();
             wellTypes = comms.getWellTypes();
-            hqs = comms.getHqs();
-            int tmp[] = prvTurn;
-            prvTurn = new int[wells.length];
-            for(int i = 0; i < tmp.length; i++) prvTurn[i] = tmp[i];
+            int tmp[] = prvWellVis;
+            prvWellVis = new int[wells.length];
+            for(int i = 0; i < tmp.length; i++) prvWellVis[i] = tmp[i];
         }
 
-        int closestWell(ResourceType tarResource){
+        int closestWell(ResourceType tarResource) throws GameActionException{
             int ret = -1;
             for(int i = 0; i < wells.length; i++){
                 if(wellTypes[i] == tarResource){
                     if(ret == -1){
                         ret = i;
-                    } else if(rc.getLocation().distanceSquaredTo(wells[i]) < rc.getLocation().distanceSquaredTo(wells[ret])){
+                    } else if(rc.getLocation().distanceSquaredTo(wells[i]) 
+                            < rc.getLocation().distanceSquaredTo(wells[ret])){
                         ret = i;
                     }
                 }
             }
-            //Find closest well if there are no correct resources
             if(ret == -1){
                 for(int i = 0; i < wells.length; i++){
                     if(ret == -1){
@@ -464,28 +389,183 @@ public strictfp class RobotPlayer {
             return ret;
         }
 
-        ResourceCarrier(RobotController rc_){
-            super(rc_);
-            updateData();
+        int closestHq() throws GameActionException{
+            int ret = -1;
+            int dist = 2000;
+            for(int i = 0; i < hqs.length; i++){
+                if(ret == -1){
+                    ret = i;
+                    dist = Math.min(5, turnCount - prvHqVis[i]);
+                } else if(Math.min(5, turnCount - prvHqVis[i]) < dist){
+                    ret = i;
+                    dist = Math.min(5, turnCount - prvHqVis[i]);
+                } else if(Math.min(5, turnCount - prvHqVis[i]) == dist 
+                    && rc.getLocation().distanceSquaredTo(hqs[i]) < rc.getLocation().distanceSquaredTo(hqs[ret])){ 
+                    ret = i;
+                    dist = Math.min(5, turnCount - prvHqVis[i]);
+                }
+            } 
+            return ret;
         }
 
-        void run(ResourceType tarResource){
+        ResourceCarrier(RobotController rc_) throws GameActionException{
+            super(rc_);
+            prvWellVis = new int[0];
+            updateData();
+            hqs = comms.getHqs();
+            prvHqVis = new int[hqs.length];
+            collecting = false;
+            foundWell = false;
+            goingHome = false;
+            foundHome = false;
+            turnCount = 0;
+        }
+
+        MapLocation closestAdjacent(MapLocation tar) throws GameActionException{
+            if(rc.getLocation().isAdjacentTo(tar)) return rc.getLocation();
+            MapLocation ret = null;
+            for(int i = 0; i < 8; i++){
+                MapLocation loc = tar.add(directions[i]);
+                if(rc.canSenseLocation(loc) && 
+                        !rc.canSenseRobotAtLocation(loc) && rc.senseMapInfo(loc).isPassable()){
+                    if(ret == null){
+                        ret = loc;
+                    } else if(rc.getLocation().distanceSquaredTo(loc) < rc.getLocation().distanceSquaredTo(ret)){
+                        ret = loc;
+                    }
+                }
+            }
+            return ret;
+        }
+
+        void updateTargetWell(ResourceType tarResource) throws GameActionException{
+            MapLocation nxtTar = closestAdjacent(wells[targetWellId]);
+            if(nxtTar != null){
+                foundWell = true;
+                target = nxtTar;
+            } else {
+                foundWell = false;
+                prvWellVis[targetWellId] = turnCount;
+                updateData();
+                int nxtWell = closestWell(tarResource);
+                if(nxtWell == -1){
+                    rc.disintegrate();
+                } else {
+                    targetWellId = nxtWell;
+                    target = wells[nxtWell];
+                }
+            }
+        }
+
+        void updateTargetHq() throws GameActionException{
+            MapLocation nxtTar = closestAdjacent(target);
+            if(nxtTar != null){
+                foundHome = true;
+                target = nxtTar;
+            } else {
+                foundHome = false;
+                prvHqVis[targetHqId] = turnCount;
+                updateData();
+                targetHqId = closestHq();
+                target = hqs[targetHqId];
+            }
+        }
+    
+        void run(ResourceType tarResource) throws GameActionException{
             if(wells.length == 0) return;
-            int targetId = closestWell(tarResource);
-            boolean collecting = false; //collecting from well
-            boolean adjacent = false; //adjacent to well
-            boolean finished = false; //done collecting
-            int turnCount = 0;
+            targetWellId = closestWell(tarResource); 
+            targetHqId = closestHq();
             while(true){
                 turnCount += 1;
-                RobotInfo targets[] = rc.senseNearbyRobots();
-                if(rc.getWeight() >= 5){
-                    for(int i = 0; i < targets.length; i++){
-                        if(targets[i].getTeam() != rc.getTeam() && rc.canAttack(targets[i].getLocation())){
-                            rc.attack(targets[i].getLocation());
-                            break;
+                try { 
+                    for(int t = 0; t < 3; t++){
+                        rc.setIndicatorString(String.valueOf(target.x) + " " + String.valueOf(target.y));
+                        RobotInfo targets[] = rc.senseNearbyRobots();
+                        if(rc.getWeight() >= 5){
+                            for(int i = 0; i < targets.length; i++){
+                                if(targets[i].getTeam() != rc.getTeam() && rc.canAttack(targets[i].getLocation())){
+                                    rc.attack(targets[i].getLocation());
+                                    return;
+                                }
+                            }
                         }
+                        if(collecting){
+                            int dif = 39 - rc.getWeight();
+                            if(dif == 1){
+                                if(rc.canCollectResource(wells[targetWellId], 1)){
+                                    rc.collectResource(wells[targetWellId], 1);
+                                }
+                                continue;
+                            } else if(dif > 1){
+                                if(rc.canCollectResource(wells[targetWellId], 2)){
+                                    rc.collectResource(wells[targetWellId], 2);
+                                }
+                                continue;
+                            } else {
+                                collecting = false;
+                                foundWell = false;
+                                goingHome = true;
+                                target = hqs[targetHqId];
+                            }
+                        }
+                        if(!goingHome){
+                            if(!foundWell){
+                                if(rc.canSenseLocation(target)){
+                                    updateTargetWell(tarResource); 
+                                }
+                            }
+                            if(foundWell){
+                                if(rc.getLocation().equals(target)){
+                                    collecting = true;
+                                    break;
+                                }
+                                if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) 
+                                        || !rc.senseMapInfo(target).isPassable())){                        
+                                    updateTargetWell(tarResource);
+                                }   
+                            }
+                        } else {
+                            if(!foundHome){
+                                if(rc.canSenseLocation(target)){
+                                    updateTargetHq();
+                                }
+                            }
+                            if(foundHome){
+                                if(rc.getLocation().equals(target)){
+                                    while(rc.getWeight() > 0){
+                                        while(!rc.canTransferResource(hqs[targetHqId], ResourceType.ADAMANTIUM, 1) && 
+                                            !rc.canTransferResource(hqs[targetHqId], ResourceType.ADAMANTIUM, 1) &&
+                                                !rc.canTransferResource(hqs[targetHqId], ResourceType.MANA, 1)){
+                                            Clock.yield();
+                                        }
+                                        if(rc.getResourceAmount(ResourceType.ADAMANTIUM) > 0){
+                                            rc.transferResource(hqs[targetHqId], ResourceType.ADAMANTIUM, rc.getResourceAmount(ResourceType.ADAMANTIUM));
+                                        } else if(rc.getResourceAmount(ResourceType.MANA) > 0){
+                                            rc.transferResource(hqs[targetHqId], ResourceType.MANA, rc.getResourceAmount(ResourceType.MANA));
+                                        } else if(rc.getResourceAmount(ResourceType.ELIXIR) > 0){
+                                            rc.transferResource(hqs[targetHqId], ResourceType.ELIXIR, rc.getResourceAmount(ResourceType.ELIXIR));
+                                        }
+                                    }
+                                    if(tarResource == ResourceType.ADAMANTIUM) tarResource = ResourceType.MANA;
+                                    else if(tarResource == ResourceType.MANA) tarResource = ResourceType.ADAMANTIUM;
+                                    //add stuff to make it go find more resources
+                                }
+                                if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) 
+                                        || !rc.senseMapInfo(target).isPassable())){                        
+                                    updateTargetHq();
+                                }
+                            }
+                        }
+                        move();
                     }
+                } catch(GameActionException e){
+                    System.out.println(rc.getType() + " Exception");
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    System.out.println(rc.getType() + " Exception");
+                    e.printStackTrace();
+                } finally {
+                    Clock.yield();
                 }
             }
         }
