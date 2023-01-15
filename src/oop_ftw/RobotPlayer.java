@@ -167,7 +167,7 @@ public strictfp class RobotPlayer {
         }
         comms.setPos(myId, rc.getLocation());
         int miners = 16;
-        int scouts = 2;
+        int scouts = 8;
         int scoutCooldown = 0;
         int cur = 2;
         while(true){
@@ -178,7 +178,7 @@ public strictfp class RobotPlayer {
                         comms.addJob(myId, 1);
                         rc.buildRobot(RobotType.CARRIER, newLoc);
                         scouts--;
-                        scoutCooldown = 50;
+                        scoutCooldown = 200;
                     }
                 }
                 if(scoutCooldown > 0) scoutCooldown--;
@@ -336,6 +336,14 @@ public strictfp class RobotPlayer {
                         } else if (rc.canMove(optimalDirection.rotateRight())){
                             rc.move(optimalDirection.rotateRight());
                             hasMoved = true;
+                        } else if(rc.getType() == RobotType.CARRIER){
+                            if(rc.canMove(optimalDirection.rotateLeft().rotateLeft())){
+                                rc.move(optimalDirection.rotateLeft().rotateLeft());
+                                hasMoved = true;
+                            } else if (rc.canMove(optimalDirection.rotateRight().rotateRight())){
+                                rc.move(optimalDirection.rotateRight().rotateRight());
+                                hasMoved = true;
+                            }
                         }
                     } else {
                         Direction optimalCardinalDirection;
@@ -507,13 +515,17 @@ public strictfp class RobotPlayer {
                     if(target == null) rc.setIndicatorString("no target");
                     else rc.setIndicatorString(String.valueOf(target.x) + " " + String.valueOf(target.y));
                     for(int t = 0; t < 2; t++){
-                        RobotInfo targets[] = rc.senseNearbyRobots();
                         if(rc.getWeight() >= 5){
+                            RobotInfo targets[] = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam().opponent());
+                            RobotInfo lowestId = null;
                             for(int i = 0; i < targets.length; i++){
-                                if(targets[i].getTeam() != rc.getTeam() && rc.canAttack(targets[i].getLocation())){
-                                    rc.attack(targets[i].getLocation());
-                                    return;
+                                if(targets[i].getType() != RobotType.HEADQUARTERS){
+                                    if(lowestId == null) lowestId = targets[i];
+                                    else if(targets[i].getID() < lowestId.getID()) lowestId = targets[i];
                                 }
+                            }
+                            if(lowestId != null && rc.canAttack(lowestId.getLocation())){
+                                rc.attack(lowestId.getLocation());
                             }
                         }
                         if(collecting){
