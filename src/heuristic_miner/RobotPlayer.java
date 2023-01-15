@@ -234,185 +234,6 @@ public strictfp class RobotPlayer {
         }
     }
 
-    private static class pathfinding {
-
-        Direction movingDirection;
-        boolean trackingObstacle;
-        boolean traversingClockwise;
-        MapLocation target;
-        RobotController rc;
-
-        pathfinding(RobotController rc_){
-            rc = rc_;
-            movingDirection = Direction.CENTER;
-            trackingObstacle = false;
-            traversingClockwise = false;
-            target = rc.getLocation();
-        }
-
-        void setTarget(MapLocation tar){
-            target = tar;
-        }
-
-        void move(){
-            if(!rc.isMovementReady()) continue;
-            if(rc.getLocation().equals(target)) return;
-            MapLocation currentPosition = rc.getLocation();
-            if(trackingObstacle){ // if the robot is tracking an obstacle...
-                if(traversingClockwise){ // if going around the obstacle clockwise...
-                    if(rc.canMove(movingDirection.rotateRight())){ // if we can turn the corner around the obstacle...
-                        rc.move(movingDirection.rotateRight()); 
-                        if(checkAcrossWall(currentPosition, movingDirection.opposite(), target)){ // if after turning corner we still need to track wall...
-                            movingDirection = movingDirection.rotateRight().rotateRight();
-                        } else { // if after turning corner we no longer need to track wall...
-                            trackingObstacle = false;
-                            movingDirection = Direction.CENTER;
-                        }
-                    } else { // if we can't turn the corner
-                        Direction newMovingDirection = movingDirection; 
-                        // find mininmum number of turns to get to a square we can go on
-                        // if the robot is surrounded, commit suicide to avoid gridlock?
-                        for(int i = 0; i < 8; i++){
-                            if(rc.canMove(movingDirection)){
-                                rc.move(movingDirection);
-                                movingDirection = newMovingDirection;
-                                break;
-                            }
-                            movingDirection = movingDirection.rotateLeft();
-                            if (i%22 == 1) newMovingDirection = movingDirection;
-                        }
-                    }
-                } else { // if going around the obstacle counterclocwise...
-                    if (rc.canMove(movingDirection.rotateLeft())){ // if we can turn the corner around the obstacle...
-                        rc.move(movingDirection.rotateLeft()); 
-                        if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) { // if after turning corner we still need to track walll...
-                            movingDirection = movingDirection.rotateLeft().rotateLeft();
-                        } else { // if after turning corner we no longer need to track wall...
-                            trackingObstacle = false;
-                            movingDirection = Direction.CENTER;
-                        }
-                    } else { // if we can't turn the corner
-                        Direction newMovingDirection = movingDirection;
-                        // find mininmum number of turns to get to a square we can go on
-                        // if the robot is surrounded, commit suicide to avoid gridlock?
-                        for (int i = 0;; i++) {
-                            if (rc.canMove(movingDirection)) {
-                                rc.move(movingDirection);
-                                movingDirection = newMovingDirection;
-                                break;
-                            }
-                            movingDirection = movingDirection.rotateRight();
-                            if (i % 2 == 1) newMovingDirection = movingDirection;
-                        }
-                    }
-                }
-            } else { // if the robot is not tracking an obstacle...
-                boolean hasMoved = false;
-                Direction optimalDirection = currentPosition.directionTo(target);
-                MapInfo optimalSquareInfo = rc.senseMapInfo(currentPosition.add(optimalDirection));
-                RobotInfo blockingRobot = rc.senseRobotAtLocation(currentPosition.add(optimalDirection));
-
-                // try to move in most optimal direction
-                // hasMoved - if the robot has already moved in the current turn
-                if(optimalSquareInfo.isPassable() && blockingRobot == null){
-                    Direction optimalSquareCurrentDirection = optimalSquareInfo.getCurrentDirection();
-                    if(optimalSquareCurrentDirection == Direction.CENTER){
-                        rc.move(optimalDirection);
-                        hasMoved = true;
-                    } else if (optimalSquareCurrentDirection == optimalDirection || 
-                            optimalSquareCurrentDirection == optimalDirection.rotateRight() ||
-                            optimalSquareCurrentDirection == optimalDirection.rotateLeft()) {
-                        rc.move(optimalDirection);
-                        hasMoved = true;
-                    }
-                } 
-                if(!hasMoved){
-                    if(blockingRobot != null){ // if robot, wait or pathfind around
-                        if(rc.canMove(optimalDirection.rotateLeft())){
-                            rc.move(optimalDirection.rotateLeft());
-                            hasMoved = true;
-                        } else if (rc.canMove(optimalDirection.rotateRight())){
-                            rc.move(optimalDirection.rotateRight());
-                            hasMoved = true;
-                        }
-                } else {
-                    Direction optimalCardinalDirection;
-                    if (optimalDirection.getDeltaX() != 0 && optimalDirection.getDeltaY() != 0){
-                        if(rng.nextBoolean()){
-                            optimalCardinalDirection = optimalDirection.rotateLeft();
-                        } else {
-                            optimalCardinalDirection = optimalDirection.rotateRight();
-                        }
-                    } else {
-                        optimalCardinalDirection = optimalDirection;
-                    }
-                    trackingObstacle = true;
-                    if(rng.nextBoolean()){
-                        movingDirection = optimalCardinalDirection.rotateLeft().rotateLeft();
-                        traversingClockwise = true;
-                    } else {
-                        movingDirection = optimalCardinalDirection.rotateRight().rotateRight();
-                        traversingClockwise = false;
-                    }
-
-                    if(traversingClockwise){
-                        if(rc.canMove(movingDirection.rotateRight())){
-                            rc.move(movingDirection.rotateRight()); 
-                            if(checkAcrossWall(currentPosition, movingDirection.opposite(), target)){
-                                movingDirection = movingDirection.rotateRight().rotateRight();
-                            } else {
-                                trackingObstacle = false;
-                                movingDirection = Direction.CENTER;
-                            }
-                        } else {
-                            Direction newMovingDirection = movingDirection;
-                            // hopefully the robot isn't trapped.....
-                            for(int i = 0;; i++){
-                                if(rc.canMove(movingDirection)){
-                                    rc.move(movingDirection);
-                                    movingDirection = newMovingDirection;
-                                    break;
-                                }
-                                movingDirection = movingDirection.rotateLeft();
-                                if(i % 2 == 1){
-                                    newMovingDirection = movingDirection;
-                                }
-                            }
-                        }
-                    } else {
-                        if(rc.canMove(movingDirection.rotateLeft())){
-                            rc.move(movingDirection.rotateLeft()); 
-                            if(checkAcrossWall(currentPosition, movingDirection.opposite(), target)){
-                                movingDirection = movingDirection.rotateLeft().rotateLeft();
-                            } else {
-                                trackingObstacle = false;
-                                movingDirection = Direction.CENTER;
-                            }
-                        } else {
-                            Direction newMovingDirection = movingDirection;
-                            // hopefully the robot isn't trapped.....
-                            for(int i = 0;; i++) {
-                                if (rc.canMove(movingDirection)) {
-                                    rc.move(movingDirection);
-                                    movingDirection = newMovingDirection;
-                                    break;
-                                }
-                                movingDirection = movingDirection.rotateRight();
-                                if (i % 2 == 1){
-                                    newMovingDirection = movingDirection;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    static void pathFind(RobotController rc, MapLocation target){
-
-    }
-
     static void runResourceCollector(RobotController rc, ResourceType tarResource) throws GameActionException{
         MapLocation wells[] = comms.getWells();
         if(wells.length == 0){
@@ -842,198 +663,226 @@ public strictfp class RobotPlayer {
 
         while (true) {
             try {
-                // System.out.println("already found well, moving back");
-                for (int moves = 0; moves < 2; moves++) {
-                    if (!rc.isMovementReady()){
-                        continue;
+                WellInfo[] nearbyWells = rc.senseNearbyWells();
+                for (int i = 0; i < nearbyWells.length; i++) {
+                    if (!comms.wellExists(nearbyWells[i]) && nearbyWells[i].getResourceType() == ResourceType.ADAMANTIUM) {
+                        wells = nearbyWells;
+                        movingBack = true;
+                        target = hqPosition;
+                        break;
                     }
+                }
+                
+                if (movingBack) {
+                    // System.out.println("already found well, moving back");
+                    for (int moves = 0; moves < 2; moves++) {
+                        if (!rc.isMovementReady())
+                            continue;
 
-                    MapLocation currentPosition = rc.getLocation();
-                    rc.setIndicatorString("pathfinding to target location at " + target.toString());
+                        if (rc.getLocation().isAdjacentTo(target)) {
+                            rc.setIndicatorString("uploaded info to global array");
+                            for(int i = 0; i < wells.length; i++) comms.addWell(wells[i]);
+                            if(rng.nextBoolean()) runResourceCollector(rc, ResourceType.ADAMANTIUM);
+                            else  runResourceCollector(rc, ResourceType.MANA);
+                            break;
+                        }
 
-                    if (trackingObstacle) {
-                        // if the robot is tracking an obstacle...
-                        if (traversingClockwise) {
-                            // if going around the obstacle clockwise...
+                        MapLocation currentPosition = rc.getLocation();
+                        rc.setIndicatorString("pathfinding to target location at " + target.toString());
 
-                            if (rc.canMove(movingDirection.rotateRight())) {
-                                // if we can turn the corner around the obstacle...
-                                rc.move(movingDirection.rotateRight()); 
-                                if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) {
-                                    // if after turning corner we still need to track wall...
-                                    movingDirection = movingDirection.rotateRight().rotateRight();
+                        if (trackingObstacle) {
+                            // if the robot is tracking an obstacle...
+                            if (traversingClockwise) {
+                                // if going around the obstacle clockwise...
+
+                                if (rc.canMove(movingDirection.rotateRight())) {
+                                    // if we can turn the corner around the obstacle...
+                                    rc.move(movingDirection.rotateRight()); 
+                                    if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) {
+                                        // if after turning corner we still need to track wall...
+                                        movingDirection = movingDirection.rotateRight().rotateRight();
+                                    } else {
+                                        // if after turning corner we no longer need to track wall...
+                                        trackingObstacle = false;
+                                        movingDirection = Direction.CENTER;
+                                    }
                                 } else {
-                                    // if after turning corner we no longer need to track wall...
-                                    trackingObstacle = false;
-                                    movingDirection = Direction.CENTER;
+                                    // if we can't turn the corner
+                                    Direction newMovingDirection = movingDirection;
+                                    
+                                    // find mininmum number of turns to get to a square we can go on
+                                    // if the robot is surrounded, commit suicide to avoid gridlock?
+                                    for (int i = 0;; i++) {
+                                        if (rc.canMove(movingDirection)) {
+                                            rc.move(movingDirection);
+                                            movingDirection = newMovingDirection;
+                                            break;
+                                        }
+
+                                        movingDirection = movingDirection.rotateLeft();
+                                        if (i % 2 == 1)
+                                            newMovingDirection = movingDirection;
+                                    }
                                 }
                             } else {
-                                // if we can't turn the corner
-                                Direction newMovingDirection = movingDirection;
-                                
-                                // find mininmum number of turns to get to a square we can go on
-                                // if the robot is surrounded, commit suicide to avoid gridlock?
-                                for(int i = 0;; i++){
-                                    if(rc.canMove(movingDirection)){
-                                        rc.move(movingDirection);
-                                        movingDirection = newMovingDirection;
-                                        break;
+                                // if going around the obstacle counterclocwise...
+                                if (rc.canMove(movingDirection.rotateLeft())) {
+                                    // if we can turn the corner around the obstacle...
+                                    rc.move(movingDirection.rotateLeft()); 
+                                    if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) {
+                                        // if after turning corner we still need to track walll...
+                                        movingDirection = movingDirection.rotateLeft().rotateLeft();
+                                    } else {
+                                        // if after turning corner we no longer need to track wall...
+                                        trackingObstacle = false;
+                                        movingDirection = Direction.CENTER;
                                     }
+                                } else {
+                                    // if we can't turn the corner
+                                    Direction newMovingDirection = movingDirection;
 
-                                    movingDirection = movingDirection.rotateLeft();
-                                    if(i % 2 == 1){
-                                        newMovingDirection = movingDirection;
+                                    // find mininmum number of turns to get to a square we can go on
+                                    // if the robot is surrounded, commit suicide to avoid gridlock?
+                                    for (int i = 0;; i++) {
+                                        if (rc.canMove(movingDirection)) {
+                                            rc.move(movingDirection);
+                                            movingDirection = newMovingDirection;
+                                            break;
+                                        }
+
+                                        movingDirection = movingDirection.rotateRight();
+                                        if (i % 2 == 1)
+                                            newMovingDirection = movingDirection;
                                     }
                                 }
                             }
                         } else {
-                            // if going around the obstacle counterclocwise...
-                            if (rc.canMove(movingDirection.rotateLeft())){
-                                // if we can turn the corner around the obstacle...
-                                rc.move(movingDirection.rotateLeft()); 
-                                if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) {
-                                    // if after turning corner we still need to track walll...
-                                    movingDirection = movingDirection.rotateLeft().rotateLeft();
-                                } else {
-                                    // if after turning corner we no longer need to track wall...
-                                    trackingObstacle = false;
-                                    movingDirection = Direction.CENTER;
-                                }
-                            } else {
-                                // if we can't turn the corner
-                                Direction newMovingDirection = movingDirection;
+                            // if the robot is not tracking an obstacle...
 
-                                // find mininmum number of turns to get to a square we can go on
-                                // if the robot is surrounded, commit suicide to avoid gridlock?
-                                for (int i = 0;; i++) {
-                                    if(rc.canMove(movingDirection)){
-                                        rc.move(movingDirection);
-                                        movingDirection = newMovingDirection;
-                                        break;
-                                    }
+                            boolean hasMoved = false;
+                            Direction optimalDirection = currentPosition.directionTo(target);
+                            MapInfo optimalSquareInfo = rc.senseMapInfo(currentPosition.add(optimalDirection));
+                            RobotInfo blockingRobot = rc.senseRobotAtLocation(currentPosition.add(optimalDirection));
 
-                                    movingDirection = movingDirection.rotateRight();
-                                    if(i % 2 == 1){
-                                        newMovingDirection = movingDirection;
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // if the robot is not tracking an obstacle...
-
-                        boolean hasMoved = false;
-                        Direction optimalDirection = currentPosition.directionTo(target);
-                        MapInfo optimalSquareInfo = rc.senseMapInfo(currentPosition.add(optimalDirection));
-                        RobotInfo blockingRobot = rc.senseRobotAtLocation(currentPosition.add(optimalDirection));
-
-                        // try to move in most optimal direction
-                        // hasMoved - if the robot has already moved in the current turn
-                        // 
+                            // try to move in most optimal direction
+                            // hasMoved - if the robot has already moved in the current turn
+                            // 
 
 
-                        if (optimalSquareInfo.isPassable() && blockingRobot == null) {
-                            Direction optimalSquareCurrentDirection = optimalSquareInfo.getCurrentDirection();
-                            if (optimalSquareCurrentDirection == Direction.CENTER) {
-                                rc.move(optimalDirection);
-                                hasMoved = true;
-                            } else if (optimalSquareCurrentDirection == optimalDirection || 
-                                    optimalSquareCurrentDirection == optimalDirection.rotateRight() ||
-                                    optimalSquareCurrentDirection == optimalDirection.rotateLeft()) {
-                                rc.move(optimalDirection);
-                                hasMoved = true;
-                            }
-                        } 
-
-                        if (!hasMoved) {
-                            if (blockingRobot != null) {
-                                // if robot, wait or pathfind around
-                                if (rc.canMove(optimalDirection.rotateLeft())) {
-                                    rc.move(optimalDirection.rotateLeft());
+                            if (optimalSquareInfo.isPassable() && blockingRobot == null) {
+                                Direction optimalSquareCurrentDirection = optimalSquareInfo.getCurrentDirection();
+                                if (optimalSquareCurrentDirection == Direction.CENTER) {
+                                    rc.move(optimalDirection);
                                     hasMoved = true;
-                                } else if (rc.canMove(optimalDirection.rotateRight())) {
-                                    rc.move(optimalDirection.rotateRight());
+                                } else if (optimalSquareCurrentDirection == optimalDirection || 
+                                        optimalSquareCurrentDirection == optimalDirection.rotateRight() ||
+                                        optimalSquareCurrentDirection == optimalDirection.rotateLeft()) {
+                                    rc.move(optimalDirection);
                                     hasMoved = true;
                                 }
-                            } else {
-                                Direction optimalCardinalDirection;
-                                if (optimalDirection.getDeltaX() != 0 && optimalDirection.getDeltaY() != 0) {
-                                    if (rng.nextBoolean())
-                                        optimalCardinalDirection = optimalDirection.rotateLeft();
-                                    else
-                                        optimalCardinalDirection = optimalDirection.rotateRight();
-                                } else {
-                                    optimalCardinalDirection = optimalDirection;
-                                }
+                            } 
 
-                                trackingObstacle = true;
-                                if (rng.nextBoolean()) {
-                                    movingDirection = optimalCardinalDirection.rotateLeft().rotateLeft();
-                                    traversingClockwise = true;
-                                } else {
-                                    movingDirection = optimalCardinalDirection.rotateRight().rotateRight();
-                                    traversingClockwise = false;
-                                }
-
-                                if (traversingClockwise) {
-                                    if (rc.canMove(movingDirection.rotateRight())) {
-                                        rc.move(movingDirection.rotateRight()); 
-                                        if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) {
-                                            movingDirection = movingDirection.rotateRight().rotateRight();
-                                        } else {
-                                            trackingObstacle = false;
-                                            movingDirection = Direction.CENTER;
-                                        }
-                                    } else {
-                                        Direction newMovingDirection = movingDirection;
-                                        // hopefully the robot isn't trapped.....
-                                        for (int i = 0;; i++) {
-                                            if (rc.canMove(movingDirection)) {
-                                                rc.move(movingDirection);
-                                                movingDirection = newMovingDirection;
-                                                break;
-                                            }
-
-                                            movingDirection = movingDirection.rotateLeft();
-                                            if (i % 2 == 1)
-                                                newMovingDirection = movingDirection;
-                                        }
+                            if (!hasMoved) {
+                                if (blockingRobot != null) {
+                                    // if robot, wait or pathfind around
+                                    if (rc.canMove(optimalDirection.rotateLeft())) {
+                                        rc.move(optimalDirection.rotateLeft());
+                                        hasMoved = true;
+                                    } else if (rc.canMove(optimalDirection.rotateRight())) {
+                                        rc.move(optimalDirection.rotateRight());
+                                        hasMoved = true;
                                     }
                                 } else {
-                                    if (rc.canMove(movingDirection.rotateLeft())) {
-                                        rc.move(movingDirection.rotateLeft()); 
-                                        if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) {
-                                            movingDirection = movingDirection.rotateLeft().rotateLeft();
+                                    Direction optimalCardinalDirection;
+                                    if (optimalDirection.getDeltaX() != 0 && optimalDirection.getDeltaY() != 0) {
+                                        if (rng.nextBoolean())
+                                            optimalCardinalDirection = optimalDirection.rotateLeft();
+                                        else
+                                            optimalCardinalDirection = optimalDirection.rotateRight();
+                                    } else {
+                                        optimalCardinalDirection = optimalDirection;
+                                    }
+
+                                    trackingObstacle = true;
+                                    if (rng.nextBoolean()) {
+                                        movingDirection = optimalCardinalDirection.rotateLeft().rotateLeft();
+                                        traversingClockwise = true;
+                                    } else {
+                                        movingDirection = optimalCardinalDirection.rotateRight().rotateRight();
+                                        traversingClockwise = false;
+                                    }
+
+                                    if (traversingClockwise) {
+                                        if (rc.canMove(movingDirection.rotateRight())) {
+                                            rc.move(movingDirection.rotateRight()); 
+                                            if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) {
+                                                movingDirection = movingDirection.rotateRight().rotateRight();
+                                            } else {
+                                                trackingObstacle = false;
+                                                movingDirection = Direction.CENTER;
+                                            }
                                         } else {
-                                            trackingObstacle = false;
-                                            movingDirection = Direction.CENTER;
+                                            Direction newMovingDirection = movingDirection;
+                                            // hopefully the robot isn't trapped.....
+                                            for (int i = 0;; i++) {
+                                                if (rc.canMove(movingDirection)) {
+                                                    rc.move(movingDirection);
+                                                    movingDirection = newMovingDirection;
+                                                    break;
+                                                }
+
+                                                movingDirection = movingDirection.rotateLeft();
+                                                if (i % 2 == 1)
+                                                    newMovingDirection = movingDirection;
+                                            }
                                         }
                                     } else {
-                                        Direction newMovingDirection = movingDirection;
-                                        // hopefully the robot isn't trapped.....
-                                        for (int i = 0;; i++) {
-                                            if (rc.canMove(movingDirection)) {
-                                                rc.move(movingDirection);
-                                                movingDirection = newMovingDirection;
-                                                break;
+                                        if (rc.canMove(movingDirection.rotateLeft())) {
+                                            rc.move(movingDirection.rotateLeft()); 
+                                            if (checkAcrossWall(currentPosition, movingDirection.opposite(), target)) {
+                                                movingDirection = movingDirection.rotateLeft().rotateLeft();
+                                            } else {
+                                                trackingObstacle = false;
+                                                movingDirection = Direction.CENTER;
                                             }
+                                        } else {
+                                            Direction newMovingDirection = movingDirection;
+                                            // hopefully the robot isn't trapped.....
+                                            for (int i = 0;; i++) {
+                                                if (rc.canMove(movingDirection)) {
+                                                    rc.move(movingDirection);
+                                                    movingDirection = newMovingDirection;
+                                                    break;
+                                                }
 
-                                            movingDirection = movingDirection.rotateRight();
-                                            if (i % 2 == 1)
-                                                newMovingDirection = movingDirection;
+                                                movingDirection = movingDirection.rotateRight();
+                                                if (i % 2 == 1)
+                                                    newMovingDirection = movingDirection;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                    }
+                } else {
+                    for (int i = 0; i < 2; i++) {
+                        while (!rc.canMove(normalDir))
+                            normalDir = normalDir.rotateRight();
+                        rc.move(normalDir);
+                        if (rng.nextBoolean())
+                            normalDir = normalDir.rotateRight();
+                        rc.setIndicatorString(normalDir.name() + " | move in normal direction");
                     }
                 }
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
+
             } catch (Exception e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
+
             } finally {
                 Clock.yield();
             }
