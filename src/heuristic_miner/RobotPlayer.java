@@ -79,6 +79,7 @@ public strictfp class RobotPlayer {
                 } else if(t == 3){
                     ret[i] = ResourceType.ELIXIR;
                 }
+                System.out.println(ret[i]);
             }
             return ret;
         }
@@ -99,7 +100,7 @@ public strictfp class RobotPlayer {
             int cur = 0;
             int x = v.getMapLocation().x*60 + v.getMapLocation().y + 1;
             while(true){
-                int y = getRange(0, 11, cur);
+                int y = getRange(0, 11, 4 + cur);
                 if(y == 0) break;
                 if(y == x) return;
                 cur++;
@@ -107,6 +108,9 @@ public strictfp class RobotPlayer {
             }
             if(cur == wellCap) return;
             setRange(0, 11, 4 + cur, x);
+            if(v.getResourceType() == ResourceType.ADAMANTIUM) setRange(12, 13, 4 + cur, 1);
+            else if(v.getResourceType() == ResourceType.MANA) setRange(12, 13, 4 + cur, 2);
+            else if(v.getResourceType() == ResourceType.ELIXIR) setRange(12, 13, 4 + cur, 3);
         }
 
         //Checks if a well exists in the data
@@ -231,6 +235,7 @@ public strictfp class RobotPlayer {
         boolean traversingClockwise = false;
         MapLocation target = null;
         int targetId = -1;
+        rc.setIndicatorString(String.valueOf(wells.length));
         //Find closest well of correct resource
         for(int i = 0; i < wells.length; i++){
             if(wellTypes[i] == tarResource){
@@ -257,6 +262,7 @@ public strictfp class RobotPlayer {
         }
         boolean collecting = false; //collecting from well
         boolean adjacent = false; //adjacent to well
+        boolean finished = false; //done collecting
         int turnCount = 0;
         while(true){
             turnCount += 1;
@@ -285,48 +291,77 @@ public strictfp class RobotPlayer {
                         continue;
                     } else {
                         collecting = false;
+                        finished = true;
+                        target = null;
+                        for(int i = 0; i < hqs.length; i++){
+                            if(target == null) target = hqs[i];
+                            else if(rc.getLocation().distanceSquaredTo(target) > rc.getLocation().distanceSquaredTo(hqs[i])){
+                                target = hqs[i];
+                            }
+                        }
                     }
                 }
                 for(int moves = 0; moves < 2; moves++){
                     if(!rc.isMovementReady()) continue;
-                    if(!adjacent){
-                        if(rc.canSenseLocation(target)){                        
-                            MapLocation nextTarget = null;
-                            for(int i = 0; i < 8; i++){
-                                MapLocation loc = target.add(directions[i]);
-                                if(!rc.canSenseRobotAtLocation(loc) || rc.senseMapInfo(loc).isPassable()){
-                                    if(nextTarget == null) nextTarget = loc;
-                                    else if(rc.getLocation().distanceSquaredTo(loc) < rc.getLocation().distanceSquaredTo(nextTarget)){
-                                        nextTarget = loc;
+                    if(!finished){
+                        if(!adjacent){
+                            if(rc.canSenseLocation(target)){                        
+                                MapLocation nextTarget = null;
+                                for(int i = 0; i < 8; i++){
+                                    MapLocation loc = wells[targetId].add(directions[i]);
+                                    if(!rc.canSenseRobotAtLocation(loc) || rc.senseMapInfo(loc).isPassable()){
+                                        if(nextTarget == null) nextTarget = loc;
+                                        else if(rc.getLocation().distanceSquaredTo(loc) < rc.getLocation().distanceSquaredTo(nextTarget)){
+                                            nextTarget = loc;
+                                        }
                                     }
                                 }
+                                if(nextTarget != null){
+                                    adjacent = true;
+                                    target = nextTarget;
+                                }
                             }
-                            if(nextTarget != null){
-                                adjacent = true;
-                                target = nextTarget;
+                        } else {
+                            if(rc.getLocation().equals(target)){
+                                collecting = true;
+                                break;
                             }
+                            if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) || !rc.senseMapInfo(target).isPassable())){                        
+                                MapLocation nextTarget = null;
+                                for(int i = 0; i < 8; i++){
+                                    MapLocation loc = wells[targetId].add(directions[i]);
+                                    if(rc.canSenseLocation(loc) && !rc.canSenseRobotAtLocation(loc) && rc.senseMapInfo(loc).isPassable()){
+                                        if(nextTarget == null) nextTarget = loc;
+                                        else if(rc.getLocation().distanceSquaredTo(loc) < rc.getLocation().distanceSquaredTo(nextTarget)){
+                                            nextTarget = loc;
+                                        }
+                                    }
+                                }
+                                if(nextTarget != null){
+                                    adjacent = true;
+                                    target = nextTarget;
+                                }
+                            }   
                         }
                     } else {
-                        if(rc.getLocation().equals(target)){
-                            collecting = true;
-                            break;
-                        }
-                        if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) || !rc.senseMapInfo(target).isPassable())){                        
-                            MapLocation nextTarget = null;
-                            for(int i = 0; i < 8; i++){
-                                MapLocation loc = target.add(directions[i]);
-                                if(!rc.canSenseRobotAtLocation(loc) && rc.senseMapInfo(loc).isPassable()){
-                                    if(nextTarget == null) nextTarget = loc;
-                                    else if(rc.getLocation().distanceSquaredTo(loc) < rc.getLocation().distanceSquaredTo(nextTarget)){
-                                        nextTarget = loc;
-                                    }
+                        if(rc.getLocation().isAdjacentTo(target)){
+                            while(rc.getWeight() > 0){
+                                while(!rc.canTransferResource(target, ResourceType.ADAMANTIUM, 1) && 
+                                    !rc.canTransferResource(target, ResourceType.ADAMANTIUM, 1) &&
+                                        !rc.canTransferResource(target, ResourceType.MANA, 1)){
+                                    Clock.yield();
+                                }
+                                if(rc.getResourceAmount(ResourceType.ADAMANTIUM) > 0){
+                                    rc.transferResource(target, ResourceType.ADAMANTIUM, rc.getResourceAmount(ResourceType.ADAMANTIUM));
+                                } else if(rc.getResourceAmount(ResourceType.MANA) > 0){
+                                    rc.transferResource(target, ResourceType.MANA, rc.getResourceAmount(ResourceType.MANA));
+                                } else if(rc.getResourceAmount(ResourceType.ELIXIR) > 0){
+                                    rc.transferResource(target, ResourceType.ELIXIR, rc.getResourceAmount(ResourceType.ELIXIR));
                                 }
                             }
-                            if(nextTarget != null){
-                                adjacent = true;
-                                target = nextTarget;
-                            }
-                        }   
+                            if(tarResource == ResourceType.ADAMANTIUM) runResourceCollector(rc, ResourceType.MANA);
+                            else if(tarResource == ResourceType.MANA) runResourceCollector(rc, ResourceType.ADAMANTIUM);
+                        }
                     }
                     
                     MapLocation currentPosition = rc.getLocation();
@@ -512,7 +547,6 @@ public strictfp class RobotPlayer {
     static void runScout(RobotController rc) throws GameActionException {
         boolean movingBack = false; 
         Direction normalDir = Direction.CENTER; 
-        WellInfo scoutedWellInfo = null;
         MapLocation hqPosition = null;
 
         // movingBack - true if moving back to hq, false otherwise
@@ -534,16 +568,16 @@ public strictfp class RobotPlayer {
         boolean trackingObstacle = false;
         Direction movingDirection = Direction.CENTER; 
         boolean traversingClockwise = false;
+        WellInfo wells[] = new WellInfo[0];
 
         while (true) {
             try {
                 WellInfo[] nearbyWells = rc.senseNearbyWells();
                 for (int i = 0; i < nearbyWells.length; i++) {
-                    if (!comms.wellExists(nearbyWells[i])) {
-                        scoutedWellInfo = nearbyWells[i];
+                    if (!comms.wellExists(nearbyWells[i]) && nearbyWells[i].getResourceType() == ResourceType.ADAMANTIUM) {
+                        wells = nearbyWells;
                         movingBack = true;
                         target = hqPosition;
-                        rc.setIndicatorString("found mana well, returning now");
                         break;
                     }
                 }
@@ -556,7 +590,7 @@ public strictfp class RobotPlayer {
 
                         if (rc.getLocation().isAdjacentTo(target)) {
                             rc.setIndicatorString("uploaded info to global array");
-                            comms.addWell(scoutedWellInfo);
+                            for(int i = 0; i < wells.length; i++) comms.addWell(wells[i]);
                             if(rng.nextBoolean()) runResourceCollector(rc, ResourceType.ADAMANTIUM);
                             else  runResourceCollector(rc, ResourceType.MANA);
                             break;
