@@ -79,7 +79,6 @@ public strictfp class RobotPlayer {
                 } else if(t == 3){
                     ret[i] = ResourceType.ELIXIR;
                 }
-                System.out.println(ret[i]);
             }
             return ret;
         }
@@ -185,17 +184,27 @@ public strictfp class RobotPlayer {
             comms.addWell(wells[i]);
         }
         comms.setPos(myId, rc.getLocation());
-        int numScouts = 2;
+        int numScouts = 5;
+        int turnCount = 0;
+        int prvScout = -5;
         while(true){
+            turnCount += 1;
             try {
-                if(numScouts == 0) continue;
-                MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
-                rc.setIndicatorString("Trying to build a carrier");
-                if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                    comms.addJob(myId,1);
-                    rc.buildRobot(RobotType.CARRIER, newLoc);
-                    numScouts--;
+                if(numScouts > 0 && turnCount - prvScout >= 5){
+                    MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                    if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                        comms.addJob(myId,1);
+                        rc.buildRobot(RobotType.CARRIER, newLoc);
+                        numScouts--;
+                    }
+                } else {
+                    MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                    if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                        comms.addJob(myId,2);
+                        rc.buildRobot(RobotType.CARRIER, newLoc);
+                    }
                 }
+                
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
@@ -260,6 +269,7 @@ public strictfp class RobotPlayer {
                 }
             }
         }
+        int lastVis[] = new int[wells.length];
         boolean collecting = false; //collecting from well
         boolean adjacent = false; //adjacent to well
         boolean finished = false; //done collecting
@@ -319,6 +329,40 @@ public strictfp class RobotPlayer {
                                 if(nextTarget != null){
                                     adjacent = true;
                                     target = nextTarget;
+                                } else {
+                                    target = null;
+                                    lastVis[targetId] = turnCount;
+                                    wells = comms.getWells();
+                                    wellTypes = comms.getWellTypes();
+                                    for(int i = 0; i < wells.length; i++){
+                                        if(lastVis[i] == 0){
+                                            if(wellTypes[i] == tarResource){
+                                                if(target == null){
+                                                    target = wells[i];
+                                                    targetId = i;
+                                                } else if(rc.getLocation().distanceSquaredTo(target) > rc.getLocation().distanceSquaredTo(target)){
+                                                    target = wells[i];
+                                                    targetId = i;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if(target == null){ 
+                                        for(int i = 0; i < wells.length; i++){
+                                            if(lastVis[i] == 0){
+                                                if(target == null){
+                                                    target = wells[i]; 
+                                                    targetId = i;
+                                                } else if(rc.getLocation().distanceSquaredTo(target) > rc.getLocation().distanceSquaredTo(target)){
+                                                    target = wells[i];
+                                                    targetId = i;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if(target == null){
+                                        rc.disintegrate();
+                                    }
                                 }
                             }
                         } else {
@@ -340,6 +384,40 @@ public strictfp class RobotPlayer {
                                 if(nextTarget != null){
                                     adjacent = true;
                                     target = nextTarget;
+                                } else {
+                                    target = null;
+                                    lastVis[targetId] = turnCount;
+                                    wells = comms.getWells();
+                                    wellTypes = comms.getWellTypes();
+                                    for(int i = 0; i < wells.length; i++){
+                                        if(lastVis[i] == 0){
+                                            if(wellTypes[i] == tarResource){
+                                                if(target == null){
+                                                    target = wells[i];
+                                                    targetId = i;
+                                                } else if(rc.getLocation().distanceSquaredTo(target) > rc.getLocation().distanceSquaredTo(target)){
+                                                    target = wells[i];
+                                                    targetId = i;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if(target == null){ 
+                                        for(int i = 0; i < wells.length; i++){
+                                            if(lastVis[i] == 0){
+                                                if(target == null){
+                                                    target = wells[i]; 
+                                                    targetId = i;
+                                                } else if(rc.getLocation().distanceSquaredTo(target) > rc.getLocation().distanceSquaredTo(target)){
+                                                    target = wells[i];
+                                                    targetId = i;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if(target == null){
+                                        rc.disintegrate();
+                                    }
                                 }
                             }   
                         }
