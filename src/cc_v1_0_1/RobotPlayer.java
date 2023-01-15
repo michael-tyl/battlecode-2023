@@ -1,4 +1,4 @@
-package heuristic_miner;
+package cc_v1_0_1;
 
 
 import battlecode.common.*;
@@ -8,7 +8,41 @@ import java.math.*;
 
 public strictfp class RobotPlayer {
 
-    static final Random rng = new Random(6147);
+    static final Random rng = new Random(6151);
+    static int turnCount = 0;
+
+    /** MAP INFO */
+    static MapLocation enemyHQ = null;
+    static MapLocation hqLoc = null;
+    static int numFriendlies = 0;
+
+    /** HQ STATIC VARS */
+    static int anchor_cooldown = 200; // How many turns until next anchor can be made
+    static boolean carrierOverride = false; // Queue new carrier to get anchor
+    static int anchors_built = 0; // Track how many anchors have been made
+
+    /** CARRIER STATIC VARS */
+    static final int MAX_CAPACITY = 40; // capcity of carriers
+
+    static final int FARMING_ROUND_LENGTH = 100; // first 100 rounds are used for farming
+
+    static final int SPRAY_MODE_ROUND = 10; // first 10 rounds spray carriers
+    
+    // 'c' - close resource carrier
+    // 'f' - far resource carrier
+    // 'a' - anchor carrier
+    // 's' - scout carrier 
+
+    /** LAUNCHER STATIC VARS */
+    // Tracks the previous target to follow if it goes out of range
+    static MapLocation prevTarget = null;
+
+    // Count number of turns since last prevTarget refresh
+    static short lastRefresh = 0;
+
+    // Do not group launchers for now
+    static boolean active = true;
+    static int moveCount = 0;
 
     static final Direction[] directions = {
         Direction.NORTH,
@@ -156,9 +190,28 @@ public strictfp class RobotPlayer {
     @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
         comms = new Communication(rc);
+
+        // Set enemy HQ loc
+        if (enemyHQ == null) {
+            hqLoc = rc.getLocation();
+            if (rc.getType() != RobotType.HEADQUARTERS) {
+                RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam());
+                for (int i = 0; i < friendlies.length; i++) {
+                    if (friendlies[i].getType() == RobotType.HEADQUARTERS) {
+                        hqLoc = friendlies[i].getLocation();
+                        break;
+                    }
+                }
+                // numFriendlies = friendlies.length;
+            }
+
+            enemyHQ = new MapLocation(Math.abs(rc.getMapWidth() - 1 - hqLoc.x), Math.abs(rc.getMapHeight() - 1 - hqLoc.y));
+        }
+
         switch (rc.getType()){
             case HEADQUARTERS: runHeadquarters(rc); break;
             case CARRIER: runCarrier(rc); break;
+            case LAUNCHER: runLauncher(rc); break;
         }
         return;
     }
@@ -177,6 +230,15 @@ public strictfp class RobotPlayer {
         }
     } 
 
+    static short countEnemyLaunchers(RobotController rc) throws GameActionException {
+        RobotInfo[] enemies = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam().opponent());
+        short count = 0;
+        for (int i = 0; i < enemies.length; i++) {
+            if (enemies[i].getType() == RobotType.LAUNCHER) count++;
+        }
+        return count;
+    }
+
     static void runHeadquarters(RobotController rc) throws GameActionException {
         int myId = rc.getID()/2 - 1;
         WellInfo wells[] = rc.senseNearbyWells();
@@ -185,27 +247,84 @@ public strictfp class RobotPlayer {
         }
         comms.setPos(myId, rc.getLocation());
         int numScouts = 5;
-        int numResource = 8;
         int turnCount = 0;
         int prvScout = -5;
+        
+        ArrayList<Direction> stkDir = new ArrayList<Direction>();
+        for (int i = 0; i < directions.length; i++) {
+            stkDir.add(directions[i]);
+        }
+        Collections.shuffle(stkDir);
         while(true){
             turnCount += 1;
             try {
-                if(numScouts > 0 && turnCount - prvScout >= 5){
-                    MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
-                    if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                        comms.addJob(myId,1);
-                        rc.buildRobot(RobotType.CARRIER, newLoc);
-                        numScouts--;
-                        prvScout = turnCount;
+                boolean built = false;
+                RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam());
+                numFriendlies = friendlies.length;
+                int numFriendliesClose = rc.senseNearbyRobots(20, rc.getTeam()).length;
+                boolean anchorBuilt = false;
+                anchor_cooldown--;
+                // Only spawn if not surrounded
+                int enemyCount = countEnemyLaunchers(rc);
+                if (countEnemyLaunchers(rc) - numFriendlies < 4) {
+                    int curVal = rc.readSharedArray(63);
+                    int flip = 1 << (rc.getID() / 2 - 1);
+                    if ((curVal & flip) == 1) {
+                        rc.writeSharedArray(63, curVal ^ flip);
                     }
-                } else if(numResource > 0){
-                    MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
-                    if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                        comms.addJob(myId,2);
-                        rc.buildRobot(RobotType.CARRIER, newLoc);
-                        numResource--;
+                    if(anchors_built < 10 && anchor_cooldown < 25 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
+                        rc.setIndicatorString("Trying to build an anchor" + numFriendlies);
+                        if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
+                            rc.buildAnchor(Anchor.ACCELERATING);
+                            anchorBuilt = true;
+                        }
+                        else if(rc.canBuildAnchor(Anchor.STANDARD)){
+                            rc.buildAnchor(Anchor.STANDARD);
+                            anchorBuilt = true;
+                        }
                     }
+                    if (!anchorBuilt){ 
+                        // Frequency of scout building
+                        int sctFreq = 10;
+
+                        if(numScouts > 0 && turnCount - prvScout >= sctFreq && numFriendlies < 17){
+                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                                comms.addJob(myId,1);
+                                rc.buildRobot(RobotType.CARRIER, newLoc);
+                                built = true;
+                                numScouts--;
+                            }
+                        } else if (turnCount - prvScout < sctFreq) {
+                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                                comms.addJob(myId,2);
+                                rc.buildRobot(RobotType.CARRIER, newLoc);
+                                built = true;
+                            }
+                        }
+                    } else {
+                        anchor_cooldown = 50;
+                        anchors_built++;
+                        carrierOverride = true;
+                    }
+                    if (!built) {
+                        for (int i = 0; i < stkDir.size(); i++) {
+                            MapLocation newLoc = rc.getLocation().add(stkDir.get(i));
+                            if (numFriendlies < 20 && turnCount < 1750 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
+                                rc.setIndicatorString("Trying to build a laucher");
+                                rc.buildRobot(RobotType.LAUNCHER, newLoc);
+                            } else if (((numFriendlies < 20 && turnCount < 1750) || carrierOverride) && rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                                comms.addJob(myId,5);
+                                rc.buildRobot(RobotType.CARRIER, newLoc);
+                            }
+                        }
+                    }
+
+                } else {
+                    int curVal = rc.readSharedArray(63);
+                    rc.writeSharedArray(63, curVal | (1 << (rc.getID() / 2 - 1)));
+                    rc.setIndicatorString("Disabled " + enemyCount);
                 }
                 
             } catch (GameActionException e) {
@@ -223,7 +342,14 @@ public strictfp class RobotPlayer {
     static void runCarrier(RobotController rc) throws GameActionException { 
         int job = comms.getJob();
         System.out.println("Job: " + job);
-        if(job == 1){ //Scout
+        // Check for anchors
+        if (rc.canTakeAnchor(hqLoc, Anchor.ACCELERATING)) {
+            rc.takeAnchor(hqLoc, Anchor.ACCELERATING);
+            runAnchorCarrier(rc);
+        } else if (rc.canTakeAnchor(hqLoc, Anchor.STANDARD)) {
+            rc.takeAnchor(hqLoc, Anchor.STANDARD);
+            runAnchorCarrier(rc);
+        } else if(job == 1){ //Scout
             runScout(rc);
         } else if(job == 2){ //Resource collector adamantium
             runResourceCollector(rc, ResourceType.ADAMANTIUM);
@@ -231,6 +357,8 @@ public strictfp class RobotPlayer {
             runResourceCollector(rc, ResourceType.MANA);
         } else if(job == 4){ //Resource collector elixir
             runResourceCollector(rc, ResourceType.ELIXIR);
+        } else if(job == 5) { //Support carrier (follows launchers)
+            runSupport(rc);
         }
     }
 
@@ -280,6 +408,13 @@ public strictfp class RobotPlayer {
         while(true){
             turnCount += 1;
             try {
+                if (rc.canTakeAnchor(hqLoc, Anchor.ACCELERATING)) {
+                    rc.takeAnchor(hqLoc, Anchor.ACCELERATING);
+                    runAnchorCarrier(rc);
+                } else if (rc.canTakeAnchor(hqLoc, Anchor.STANDARD)) {
+                    rc.takeAnchor(hqLoc, Anchor.STANDARD);
+                    runAnchorCarrier(rc);
+                } 
                 RobotInfo targets[] = rc.senseNearbyRobots();
                 if(rc.getWeight() >= 5){
                     for(int i = 0; i < targets.length; i++){
@@ -337,11 +472,6 @@ public strictfp class RobotPlayer {
                                     lastVis[targetId] = turnCount;
                                     wells = comms.getWells();
                                     wellTypes = comms.getWellTypes();
-                                    if(lastVis.length < wells.length){
-                                        int tmp[] = lastVis;
-                                        lastVis = new int[wells.length];
-                                        for(int i = 0; i < tmp.length; i++) lastVis[i] = tmp[i];
-                                    }
                                     for(int i = 0; i < wells.length; i++){
                                         if(lastVis[i] == 0){
                                             if(wellTypes[i] == tarResource){
@@ -397,11 +527,6 @@ public strictfp class RobotPlayer {
                                     lastVis[targetId] = turnCount;
                                     wells = comms.getWells();
                                     wellTypes = comms.getWellTypes();
-                                    if(lastVis.length < wells.length){
-                                        int tmp[] = lastVis;
-                                        lastVis = new int[wells.length];
-                                        for(int i = 0; i < tmp.length; i++) lastVis[i] = tmp[i];
-                                    }
                                     for(int i = 0; i < wells.length; i++){
                                         if(lastVis[i] == 0){
                                             if(wellTypes[i] == tarResource){
@@ -620,6 +745,109 @@ public strictfp class RobotPlayer {
             }
         }
     }
+
+    // carries anchors to islands
+    static void runAnchorCarrier(RobotController rc) throws GameActionException {
+        boolean movingBack = false;
+        Direction normalDir = Direction.CENTER;                             // direction robot is "trying" to go in
+        MapLocation hqPosition = new MapLocation(0, 0);
+        MapLocation wellPosition = new MapLocation(0, 0);
+        Stack<Direction> moveList = new Stack<Direction>();
+
+        // initialize normalDir
+        RobotInfo[] nearbyRobots = rc.senseNearbyRobots(2, rc.getTeam()); 
+        for (int i = 0; i < nearbyRobots.length; i++) {
+            if (nearbyRobots[i].getType() == RobotType.HEADQUARTERS) {
+                normalDir = rc.getLocation().directionTo(nearbyRobots[i].getLocation()).opposite();
+                hqPosition = nearbyRobots[i].getLocation();
+                break;
+            }
+        }
+        while (true) {
+            turnCount += 1;
+            try {
+                MapLocation me = rc.getLocation();
+                rc.setIndicatorString(normalDir.name());
+                
+                if (rc.getWeight() == 0)
+                    movingBack = false;
+                
+                if (movingBack) {
+                    while (true) {
+                        Direction dir = moveList.peek().opposite();
+                        if (!rc.canMove(dir))
+                            break;
+                        moveList.pop();
+                        rc.move(dir);
+                        rc.setIndicatorString("moving back");
+                    }
+                } else {
+                    if (rc.canPlaceAnchor()) {
+                        rc.placeAnchor();
+                        movingBack = true;
+                    } else {
+                        int[] islands = rc.senseNearbyIslands();
+
+                        int curid = 0;
+                        for(; curid < islands.length; curid++) {
+                            if(rc.senseTeamOccupyingIsland(islands[curid]) == Team.NEUTRAL)
+                                break;
+                        }
+
+                        if (curid < islands.length) {
+                            int idx = islands[curid];
+                            MapLocation[] goIsland = rc.senseNearbyIslandLocations(idx);
+                            MapLocation goToLoc = goIsland[curid];
+
+                            normalDir = me.directionTo(goToLoc);
+
+                            if (rc.canMove(normalDir)) {
+                                rc.move(normalDir);
+                                moveList.push(normalDir);
+                                rc.setIndicatorString("move towards island");
+                            } else {
+                                int lim = 0;
+                                while (!rc.canMove(normalDir) && lim < 8) {
+                                    normalDir = normalDir.rotateRight();
+                                    lim++;
+                                }
+                                
+                                if (rc.canMove(normalDir)) {
+                                    rc.move(normalDir);
+                                    moveList.push(normalDir);
+                                    rc.setIndicatorString(normalDir.name() + " | move in normal direction");
+
+                                }
+                            }
+                        } else {
+                            int lim = 0;
+                            while (!rc.canMove(normalDir) && lim < 8) {
+                                normalDir = normalDir.rotateRight();
+                                lim++;
+                            }
+                            if (rc.canMove(normalDir)) {
+                                rc.move(normalDir);
+                                moveList.push(normalDir);
+                                rc.setIndicatorString(normalDir.name() + " | move in normal direction");
+
+                            }
+                        }
+                    }
+                }
+            } catch (GameActionException e) {
+                System.out.println(rc.getType() + " Exception");
+                e.printStackTrace();
+
+            } catch (Exception e) {
+                System.out.println(rc.getType() + " Exception");
+                e.printStackTrace();
+
+            } finally {
+                Clock.yield();
+            }
+        }
+    }
+
 
     static boolean checkAcrossWall(MapLocation position, Direction wallDirection, MapLocation target) {
         switch (wallDirection) {
@@ -887,5 +1115,190 @@ public strictfp class RobotPlayer {
                 Clock.yield();
             }
         } 
+    }
+    
+    static void runSupport(RobotController rc) throws GameActionException {
+        MapLocation curLoc = rc.getLocation();
+        rc.setIndicatorString("Support carrier!");
+        while (true) {
+            try {
+                RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam());
+                
+                // Leave null for now
+                Direction dir = null;
+
+
+                for (int i = 0; i < friendlies.length; i++) {
+                    if (friendlies[i].getType() == RobotType.LAUNCHER) {
+                        dir = curLoc.directionTo(friendlies[i].getLocation());
+                        break;
+                    }
+                }
+
+                // Try moving towards enemy HQ
+                if (dir == null) {
+                    dir = curLoc.directionTo(enemyHQ);
+                    int i = 0;
+                    while (!rc.canMove(dir) && i < 20) {
+                        dir = directions[rng.nextInt(directions.length)];
+                        i++;
+                    }
+                }
+                
+                if (rc.canMove(dir)) {
+                    rc.move(dir);
+                    moveCount++;
+                }
+                
+            } catch (GameActionException e) {
+                System.out.println(rc.getType() + " Exception");
+                e.printStackTrace();
+
+            } catch (Exception e) {
+                System.out.println(rc.getType() + " Exception");
+                e.printStackTrace();
+
+            } finally {
+                Clock.yield();
+            }
+        } 
+    }
+
+    static void runLauncher(RobotController rc) throws GameActionException {
+
+        while (true) {
+            turnCount += 1;
+            try {
+                // Try to attack someone
+                int radius = rc.getType().actionRadiusSquared;
+                int vision = rc.getType().visionRadiusSquared;
+                Team opponent = rc.getTeam().opponent();
+                RobotInfo[] enemies = rc.senseNearbyRobots(vision, opponent);
+                RobotInfo[] friendlies = rc.senseNearbyRobots(vision, rc.getTeam());
+
+                MapLocation curLoc = rc.getLocation();
+
+                // Leave null for now
+                Direction dir = null;
+
+                // Move towards previous target, if available
+                if (prevTarget != null) {
+                    dir = curLoc.directionTo(prevTarget);
+                    lastRefresh++;
+                }
+                if (lastRefresh >= 3) {
+                    prevTarget = null;
+                }
+
+                boolean chase = false;
+                int curEnemy = 0;
+                MapLocation target = null;
+                int launcherID = 999999;
+                int launcherHP = 999999;
+                // Make sure not attacking HQ
+                while (curEnemy < enemies.length) {
+                    MapLocation toAttack = enemies[curEnemy].location;
+
+                    if (enemies[curEnemy].type == RobotType.HEADQUARTERS) {
+                        curEnemy++;
+                        dir = curLoc.directionTo(toAttack);
+                        continue;
+                    }
+
+                    // MapLocation toAttack = rc.getLocation().add(Direction.EAST);
+
+                    if (rc.canAttack(toAttack)) {
+                        if (target == null 
+                            || (enemies[curEnemy].getHealth() == launcherHP && enemies[curEnemy].getID() < launcherID && enemies[curEnemy].getType() == RobotType.LAUNCHER)
+                            || (enemies[curEnemy].getHealth() < launcherHP)) {
+                            target = toAttack;
+                            launcherHP = enemies[curEnemy].getHealth();
+                            launcherID = enemies[curEnemy].getID();
+                        }
+                    } else {
+                        dir = curLoc.directionTo(toAttack);
+                        prevTarget = toAttack;
+                        lastRefresh = 0;
+                        rc.setIndicatorString("Chasing enemy in vision");
+                    }
+                    curEnemy++;
+                }
+
+                if (target != null) {
+                    rc.setIndicatorString("Attacking");        
+                    rc.attack(target);
+
+                    if (enemies[curEnemy].health <= 0) {
+                        if (curEnemy+1 >= enemies.length) {
+                            prevTarget = null;
+                            dir = directions[rng.nextInt(directions.length)];
+                        } else {
+                            prevTarget = enemies[curEnemy-1].getLocation();
+                        }
+                    } else {
+                        dir = curLoc.directionTo(target);
+                        chase = true;
+                        prevTarget = target;
+                    }
+
+                    lastRefresh = 0;
+                }
+
+                // Try moving towards enemy HQ
+                if (dir == null) {
+                    dir = curLoc.directionTo(enemyHQ);
+                    int i = 0;
+                    while (!rc.canMove(dir) && i < 20) {
+                        dir = directions[rng.nextInt(directions.length)];
+                        i++;
+                    }
+                }
+                
+                // TODO: Better criteria than lowest ID
+                // Current form is worse than v0.3, currently not used to set direction
+                boolean leader = true;
+
+                // MapLocation centerMass = rc.getLocation();
+                int launcherCount = 0;
+                if (!active) for (int i = 0; i < friendlies.length; i++) {
+                    if (friendlies[i].getType() != RobotType.LAUNCHER) continue;
+                    launcherCount++;
+                    // Activate in groups of at least x size
+                    if (launcherCount >= 3) {
+                        active = true;
+                        rc.setIndicatorString("Active!");
+                    }
+                    // if (friendlies[i].getID() < rc.getID()) leader = false;
+                    // centerMass = centerMass.add(curLoc.directionTo(friendlies[i].getLocation()));
+                }
+
+                // if (!leader && !chase) {
+                //     dir = curLoc.directionTo(centerMass);
+                // }
+
+                // Move 3 times to prevent crowding HQ
+                if ((moveCount < 3 || active || rc.senseMapInfo(curLoc).hasCloud()) && rc.canMove(dir)) {
+                    rc.move(dir);
+                    moveCount++;
+                }
+            }  catch (GameActionException e) {
+                // Oh no! It looks like we did something illegal in the Battlecode world. You should
+                // handle GameActionExceptions judiciously, in case unexpected events occur in the game
+                // world. Remember, uncaught exceptions cause your robot to explode!
+                System.out.println(rc.getType() + " Exception");
+                e.printStackTrace();
+
+            } catch (Exception e) {
+                // Oh no! It looks like our code tried to do something bad. This isn't a
+                // GameActionException, so it's more likely to be a bug in our code.
+                System.out.println(rc.getType() + " Exception");
+                e.printStackTrace();
+
+            } finally {
+                // Signify we've done everything we want to do, thereby ending our turn.
+                // This will make our code wait until the next turn, and then perform this loop again.
+                Clock.yield();
+            }
+        }
     }
 }

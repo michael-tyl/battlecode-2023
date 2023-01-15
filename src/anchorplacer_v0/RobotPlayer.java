@@ -1,4 +1,4 @@
-package anchor_v0;
+package anchorplacer_v0;
 
 import battlecode.common.*;
 
