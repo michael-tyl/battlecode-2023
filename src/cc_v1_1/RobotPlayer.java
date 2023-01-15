@@ -1045,6 +1045,7 @@ public strictfp class RobotPlayer {
                 MapLocation target = null;
                 int launcherID = 999999;
                 int launcherHP = 999999;
+                boolean launcher = false;
                 // Make sure not attacking HQ
                 while (curEnemy < enemies.length) {
                     MapLocation toAttack = enemies[curEnemy].location;
@@ -1059,9 +1060,11 @@ public strictfp class RobotPlayer {
 
                     if (rc.canAttack(toAttack)) {
                         if (target == null 
-                            || (enemies[curEnemy].getHealth() == launcherHP && enemies[curEnemy].getID() < launcherID && enemies[curEnemy].getType() == RobotType.LAUNCHER)
-                            || (enemies[curEnemy].getHealth() < launcherHP)) {
+                            || (enemies[curEnemy].getType() == RobotType.LAUNCHER && launcher == false)
+                            || (enemies[curEnemy].getHealth() == launcherHP && enemies[curEnemy].getID() < launcherID && (enemies[curEnemy].getType() == RobotType.LAUNCHER || !launcher))
+                            || (enemies[curEnemy].getHealth() < launcherHP && (enemies[curEnemy].getType() == RobotType.LAUNCHER || !launcher))) {
                             target = toAttack;
+                            if (enemies[curEnemy].getType() == RobotType.LAUNCHER) launcher = true;
                             launcherHP = enemies[curEnemy].getHealth();
                             launcherID = enemies[curEnemy].getID();
                         }
@@ -1074,25 +1077,6 @@ public strictfp class RobotPlayer {
                     curEnemy++;
                 }
 
-                if (target != null) {
-                    rc.setIndicatorString("Attacking");        
-                    rc.attack(target);
-
-                    if (enemies[curEnemy].health <= 0) {
-                        if (curEnemy+1 >= enemies.length) {
-                            prevTarget = null;
-                            dir = directions[rng.nextInt(directions.length)];
-                        } else {
-                            prevTarget = enemies[curEnemy-1].getLocation();
-                        }
-                    } else {
-                        dir = curLoc.directionTo(target);
-                        chase = true;
-                        prevTarget = target;
-                    }
-
-                    lastRefresh = 0;
-                }
 
                 // Try moving towards enemy HQ
                 if (dir == null) {
@@ -1131,6 +1115,58 @@ public strictfp class RobotPlayer {
                 if ((moveCount < 4 || active || rc.senseMapInfo(curLoc).hasCloud()) && rc.canMove(dir)) {
                     rc.move(dir);
                     moveCount++;
+                }
+
+                // Identify new target after moving
+                curEnemy = 0;
+                while (curEnemy < enemies.length) {
+                    MapLocation toAttack = enemies[curEnemy].location;
+
+                    if (enemies[curEnemy].type == RobotType.HEADQUARTERS) {
+                        curEnemy++;
+                        dir = curLoc.directionTo(toAttack);
+                        continue;
+                    }
+
+                    // MapLocation toAttack = rc.getLocation().add(Direction.EAST);
+                    if (rc.canAttack(toAttack)) {
+                        if (target == null 
+                            || (enemies[curEnemy].getType() == RobotType.LAUNCHER && launcher == false)
+                            || (enemies[curEnemy].getHealth() == launcherHP && enemies[curEnemy].getID() < launcherID && (enemies[curEnemy].getType() == RobotType.LAUNCHER || !launcher))
+                            || (enemies[curEnemy].getHealth() < launcherHP && (enemies[curEnemy].getType() == RobotType.LAUNCHER || !launcher))) {
+                            target = toAttack;
+                            if (enemies[curEnemy].getType() == RobotType.LAUNCHER) launcher = true;
+                            launcherHP = enemies[curEnemy].getHealth();
+                            launcherID = enemies[curEnemy].getID();
+                        }
+                    } else {
+                        dir = curLoc.directionTo(toAttack);
+                        prevTarget = toAttack;
+                        lastRefresh = 0;
+                        rc.setIndicatorString("Chasing enemy in vision");
+                    }
+                    curEnemy++;
+                }
+
+                // Attack after moving
+                if (target != null) {
+                    rc.setIndicatorString("Attacking");        
+                    rc.attack(target);
+
+                    if (enemies[curEnemy].health <= 0) {
+                        if (curEnemy+1 >= enemies.length) {
+                            prevTarget = null;
+                            dir = directions[rng.nextInt(directions.length)];
+                        } else {
+                            prevTarget = enemies[curEnemy-1].getLocation();
+                        }
+                    } else {
+                        dir = curLoc.directionTo(target);
+                        chase = true;
+                        prevTarget = target;
+                    }
+
+                    lastRefresh = 0;
                 }
             }  catch (GameActionException e) {
                 // Oh no! It looks like we did something illegal in the Battlecode world. You should
