@@ -56,8 +56,6 @@ public strictfp class RobotPlayer {
     }; 
 
     static private class Communication {
-
-
         int wellCap = 14;
         RobotController rc;
 
@@ -133,7 +131,7 @@ public strictfp class RobotPlayer {
             int cur = 0;
             int x = v.getMapLocation().x*60 + v.getMapLocation().y + 1;
             while(true){
-                int y = getRange(0, 11, 4 + cur);
+                int y = getRange(0, 11, cur);
                 if(y == 0) break;
                 if(y == x) return;
                 cur++;
@@ -141,9 +139,6 @@ public strictfp class RobotPlayer {
             }
             if(cur == wellCap) return;
             setRange(0, 11, 4 + cur, x);
-            if(v.getResourceType() == ResourceType.ADAMANTIUM) setRange(12, 13, 4 + cur, 1);
-            else if(v.getResourceType() == ResourceType.MANA) setRange(12, 13, 4 + cur, 2);
-            else if(v.getResourceType() == ResourceType.ELIXIR) setRange(12, 13, 4 + cur, 3);
         }
 
         //Checks if a well exists in the data
@@ -279,7 +274,6 @@ public strictfp class RobotPlayer {
                 numFriendlies = friendlies.length;
                 int numFriendliesClose = rc.senseNearbyRobots(20, rc.getTeam()).length;
                 boolean anchorBuilt = false;
-                anchor_cooldown--;
                 // Only spawn if not surrounded
                 int enemyCount = countEnemyLaunchers(rc);
                 if (countEnemyLaunchers(rc) - numFriendlies < 4) {
@@ -288,21 +282,20 @@ public strictfp class RobotPlayer {
                     if ((curVal & flip) == 1) {
                         rc.writeSharedArray(63, curVal ^ flip);
                     }
-                    if(anchors_built < 10 && anchor_cooldown < 25 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
-                        rc.setIndicatorString("Trying to build an anchor" + numFriendlies);
-                        if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
-                            rc.buildAnchor(Anchor.ACCELERATING);
-                            anchorBuilt = true;
-                        }
-                        else if(rc.canBuildAnchor(Anchor.STANDARD)){
-                            rc.buildAnchor(Anchor.STANDARD);
-                            anchorBuilt = true;
-                        }
-                    }
-                    if (!anchorBuilt){ 
-                        // Frequency of scout building
-                        int sctFreq = 10;
+                    // if(anchors_built < 10 && anchor_cooldown < 25 && rc.getNumAnchors(Anchor.STANDARD) == 0 && rc.getNumAnchors(Anchor.ACCELERATING) == 0) {
+                    //     rc.setIndicatorString("Trying to build an anchor" + numFriendlies);
+                    //     if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
+                    //         rc.buildAnchor(Anchor.ACCELERATING);
+                    //         anchorBuilt = true;
+                    //     }
+                    //     else if(rc.canBuildAnchor(Anchor.STANDARD)){
+                    //         rc.buildAnchor(Anchor.STANDARD);
+                    //         anchorBuilt = true;
+                    //     }
+                    // }
+                    int sctFreq = 10;
 
+                    if (rng.nextBoolean()) {
                         if(numScouts > 0 && turnCount - prvScout >= sctFreq && numFriendlies < 17){
                             MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
                             if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
@@ -319,10 +312,6 @@ public strictfp class RobotPlayer {
                                 built = true;
                             }
                         }
-                    } else {
-                        anchor_cooldown = 50;
-                        anchors_built++;
-                        carrierOverride = true;
                     }
                     if (!built) {
                         for (int i = 0; i < stkDir.size(); i++) {
@@ -420,13 +409,13 @@ public strictfp class RobotPlayer {
         while(true){
             turnCount += 1;
             try {
-                if (rc.canTakeAnchor(hqLoc, Anchor.ACCELERATING)) {
-                    rc.takeAnchor(hqLoc, Anchor.ACCELERATING);
-                    runAnchorCarrier(rc);
-                } else if (rc.canTakeAnchor(hqLoc, Anchor.STANDARD)) {
-                    rc.takeAnchor(hqLoc, Anchor.STANDARD);
-                    runAnchorCarrier(rc);
-                } 
+                // if (rc.canTakeAnchor(hqLoc, Anchor.ACCELERATING)) {
+                //     rc.takeAnchor(hqLoc, Anchor.ACCELERATING);
+                //     runAnchorCarrier(rc);
+                // } else if (rc.canTakeAnchor(hqLoc, Anchor.STANDARD)) {
+                //     rc.takeAnchor(hqLoc, Anchor.STANDARD);
+                //     runAnchorCarrier(rc);
+                // } 
                 RobotInfo targets[] = rc.senseNearbyRobots();
                 if(rc.getWeight() >= 5){
                     for(int i = 0; i < targets.length; i++){
@@ -744,108 +733,7 @@ public strictfp class RobotPlayer {
                         }
                     }
                 }
-            } catch (GameActionException e) {
-                System.out.println(rc.getType() + " Exception");
-                e.printStackTrace();
-
-            } catch (Exception e) {
-                System.out.println(rc.getType() + " Exception");
-                e.printStackTrace();
-
-            } finally {
-                Clock.yield();
-            }
-        }
-    }
-
-    // carries anchors to islands
-    static void runAnchorCarrier(RobotController rc) throws GameActionException {
-        boolean movingBack = false;
-        Direction normalDir = Direction.CENTER;                             // direction robot is "trying" to go in
-        MapLocation hqPosition = new MapLocation(0, 0);
-        MapLocation wellPosition = new MapLocation(0, 0);
-        Stack<Direction> moveList = new Stack<Direction>();
-
-        // initialize normalDir
-        RobotInfo[] nearbyRobots = rc.senseNearbyRobots(2, rc.getTeam()); 
-        for (int i = 0; i < nearbyRobots.length; i++) {
-            if (nearbyRobots[i].getType() == RobotType.HEADQUARTERS) {
-                normalDir = rc.getLocation().directionTo(nearbyRobots[i].getLocation()).opposite();
-                hqPosition = nearbyRobots[i].getLocation();
-                break;
-            }
-        }
-        while (true) {
-            turnCount += 1;
-            try {
-                MapLocation me = rc.getLocation();
-                rc.setIndicatorString(normalDir.name());
-                
-                if (rc.getWeight() == 0)
-                    movingBack = false;
-                
-                if (movingBack) {
-                    while (true) {
-                        Direction dir = moveList.peek().opposite();
-                        if (!rc.canMove(dir))
-                            break;
-                        moveList.pop();
-                        rc.move(dir);
-                        rc.setIndicatorString("moving back");
-                    }
-                } else {
-                    if (rc.canPlaceAnchor()) {
-                        rc.placeAnchor();
-                        movingBack = true;
-                    } else {
-                        int[] islands = rc.senseNearbyIslands();
-
-                        int curid = 0;
-                        for(; curid < islands.length; curid++) {
-                            if(rc.senseTeamOccupyingIsland(islands[curid]) == Team.NEUTRAL)
-                                break;
-                        }
-
-                        if (curid < islands.length) {
-                            int idx = islands[curid];
-                            MapLocation[] goIsland = rc.senseNearbyIslandLocations(idx);
-                            MapLocation goToLoc = goIsland[curid];
-
-                            normalDir = me.directionTo(goToLoc);
-
-                            if (rc.canMove(normalDir)) {
-                                rc.move(normalDir);
-                                moveList.push(normalDir);
-                                rc.setIndicatorString("move towards island");
-                            } else {
-                                int lim = 0;
-                                while (!rc.canMove(normalDir) && lim < 8) {
-                                    normalDir = normalDir.rotateRight();
-                                    lim++;
-                                }
-                                
-                                if (rc.canMove(normalDir)) {
-                                    rc.move(normalDir);
-                                    moveList.push(normalDir);
-                                    rc.setIndicatorString(normalDir.name() + " | move in normal direction");
-
-                                }
-                            }
-                        } else {
-                            int lim = 0;
-                            while (!rc.canMove(normalDir) && lim < 8) {
-                                normalDir = normalDir.rotateRight();
-                                lim++;
-                            }
-                            if (rc.canMove(normalDir)) {
-                                rc.move(normalDir);
-                                moveList.push(normalDir);
-                                rc.setIndicatorString(normalDir.name() + " | move in normal direction");
-
-                            }
-                        }
-                    }
-                }
+                rc.setIndicatorString("am a resource carrier");
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
@@ -875,6 +763,7 @@ public strictfp class RobotPlayer {
     }
     
     static void runScout(RobotController rc) throws GameActionException {
+        rc.setIndicatorString("am a scout");
         boolean movingBack = false; 
         Direction normalDir = Direction.CENTER; 
         MapLocation hqPosition = null;
@@ -1114,6 +1003,7 @@ public strictfp class RobotPlayer {
                         rc.setIndicatorString(normalDir.name() + " | move in normal direction");
                     }
                 }
+                rc.setIndicatorString("am a scout");
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
@@ -1413,6 +1303,7 @@ public strictfp class RobotPlayer {
                         rc.setIndicatorString(normalDir.name() + " | move in normal direction");
                     }
                 }
+                rc.setIndicatorString("am a island scout");
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
