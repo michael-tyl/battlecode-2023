@@ -1,98 +1,139 @@
-static private class Comms {
+static private class Communication {
 
-    static final int wellCap = 13;
 
-    //Sets the position stored at ind to v
-    static void setPos(RobotController rc, int ind, int v) throws GameActionException{
+    int wellCap = 14;
+    RobotController rc;
+
+    Communication(RobotController rc_){
+        rc = rc_;
+    }
+
+    int getRange(int l, int r, int ind) throws GameActionException {
+        return (rc.readSharedArray(ind) >> l) & ((1 << (r - l + 1)) - 1);
+    }
+
+    void setRange(int l, int r, int ind, int v) throws GameActionException {
         int x = rc.readSharedArray(ind);
-        rc.writeSharedArray(ind, ((x >> 11) << 11) + v);
+        x &= ((1 << 16) - 1) ^ (((1 << (r - l + 1)) - 1) << l);
+        x |= v << l;
+        rc.writeSharedArray(ind, x);
     }
 
     //Gets the position stored at ind
-    static int getPos(RobotController rc, int ind) throws GameActionException{
-        int x = rc.readSharedArray(ind);
-        return x & ((1 << 12) - 1);
-    }
-
-    //Hashes (x, y) into an int
-    static int hashPos(int x, int y){
-        return x*60 + y + 1;
+    MapLocation getPos(int ind) throws GameActionException{
+        int x = getRange(0, 11, ind);
+        return new MapLocation((x - 1)/60, (x - 1)%60);
     } 
 
-    //Sets the job stored at ind to v [0, 15]
-    static void setJob(RobotController rc, int ind, int v) throws GameActionException {
-        int x = rc.readSharedArray(ind);
-        rc.writeSharedArray(ind, (x & ((1 << 12) - 1)) + (v << 12));
-    }
+    //Sets the position stored at ind
+    void setPos(int ind, MapLocation v) throws GameActionException{
+        rc.writeSharedArray(ind, v.x*60 + v.y + 1);
+    } 
 
     //Returns array of wells stored in the shared data
-    static MapLocation[] getWells(RobotController rc) throws GameActionException {
+    MapLocation[] getWells() throws GameActionException {
         int cur = 0;
-        while(getPos(rc, 4 + cur) > 0) cur++;
+        while(getRange(0, 11, 4 + cur) > 0) cur++;
         MapLocation ret[] = new MapLocation[cur];
         for(int i = 0; i < cur; i++){
-            int x = getPos(rc, 4 + cur);
-            ret[i] = new MapLocation((x - 1)/60, (x - 1)%60);
+            ret[i] = getPos(4 + i);
+        }
+        return ret;
+    }
+
+    //Returns array of well types stored in the shared data
+    //index should correspond with wells from getWells
+    ResourceType[] getWellTypes() throws GameActionException {
+        int cur = 0;
+        while(getRange(0, 11, 4 + cur) > 0) cur++;
+        ResourceType ret[] = new ResourceType[cur];
+        for(int i = 0; i < cur; i++){
+            int t = getRange(12, 13, 4 + i);
+            if(t == 1){
+                ret[i] = ResourceType.ADAMANTIUM;
+            } else if(t == 2){
+                ret[i] = ResourceType.MANA;
+            } else if(t == 3){
+                ret[i] = ResourceType.ELIXIR;
+            }
         }
         return ret;
     }
 
     //Returns array of headquarters stored in the shared data
-    static MapLocation[] getHqs(RobotController rc) throws GameActionException {
+    MapLocation[] getHqs() throws GameActionException {
         int cur = 0;
-        for(int i = 0; i < 4; i++) if(getPos(rc, i) > 0) cur++;
+        for(int i = 0; i < 4; i++) if(getRange(0, 11, i) > 0) cur++;
         MapLocation ret[] = new MapLocation[cur];
-        cur = 0;
-        for(int i = 0; i < 4; i++){
-            int x = getPos(rc, i);
-            if(x > 0){
-                ret[cur++] = new MapLocation((x - 1)/60, (x - 1)%60);
-            }
+        for(int i = 0; i < cur; i++){
+            ret[i] = getPos(i);
         }
         return ret;
     }
 
     //Adds a well to the shared data
-    static void addWell(RobotController rc, int v) throws GameActionException {
+    void addWell(WellInfo v) throws GameActionException {
         int cur = 0;
-        while(getPos(rc, 4 + cur) > 0){
-            if(getPos(rc, 4 + cur) == v) return;
+        int x = v.getMapLocation().x*60 + v.getMapLocation().y + 1;
+        while(true){
+            int y = getRange(0, 11, cur);
+            if(y == 0) break;
+            if(y == x) return;
             cur++;
+            if(cur == wellCap) break;
         }
         if(cur == wellCap) return;
-        setPos(rc, cur, v);
+        setRange(0, 11, 4 + cur, x);
     }
 
     //Checks if a well exists in the data
-    static boolean wellExists(RobotController rc, int v) throws GameActionException {
+    boolean wellExists(WellInfo v) throws GameActionException {
         int cur = 0;
-        while(getPos(rc, 4 + cur) > 0){
-            if(getPos(rc, 4 + cur) == v) return true;
+        int x = v.getMapLocation().x*60 + v.getMapLocation().y + 1;
+        while(true){
+            int y = getRange(0, 11, cur);
+            if(y == 0) break;
+            if(y == x) return true;
             cur++;
+            if(cur == wellCap) break;
         }
         return false;
     }
 
     //Gets the job of the robot at spawn
-    static int getJob(RobotController rc) throws GameActionException {
-        int ret = -1; 
-        int ind = -1;
-        for(int i = 2; i <= 9; i++){
+    int getJob() throws GameActionException {
+        int st = 2;
+        if(rc.getTeam() == Team.A) st++;
+        for(int i = st; i <= 9; i += 2){
             if(rc.canSenseRobot(i)){
-                int x = rc.readSharedArray(i/2 - 1);
-                if((x >> 12) > 0){
-                    ret = x >> 12;
-                    ind = i;
+                int hq = i/2 - 1;
+                int ret = getRange(12, 15, hq);
+                if(ret > 0){
+                    setRange(12, 15, hq, getRange(12, 15, wellCap + hq));
+                    setRange(12, 15, wellCap + hq, 0);
+                    return ret;
                 }
             }
         }
-        if(ind != -1) setJob(rc, ind/2 - 1, 0);
-        return ret;
+        return -1;
     }
 
-    //Check if a headquarters can spawn a bot without overriding current job
-    static boolean canSpawn(RobotController rc, int ind) throws GameActionException {
-        int x = rc.readSharedArray(ind);
-        return (x >> 12) == 0;
+    //Adds a job to hq job queue
+    void addJob(int hq, int v) throws GameActionException {
+        if(getRange(12, 15, hq) == 0) setRange(12, 15, hq, v);
+        else setRange(12, 15, 14 + hq, v);
     }
+}
+
+static Communication comms;
+
+@SuppressWarnings("unused")
+public static void run(RobotController rc) throws GameActionException {
+    comms = new Communication(rc);
+    switch (rc.getType()){
+        case HEADQUARTERS: runHeadquarters(rc); break;
+        case CARRIER: runCarrier(rc); break;
+    }
+
+    return;
 }
