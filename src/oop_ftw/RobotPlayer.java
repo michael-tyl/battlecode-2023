@@ -166,15 +166,30 @@ public strictfp class RobotPlayer {
             comms.addWell(wells[i]);
         }
         comms.setPos(myId, rc.getLocation());
-        int numScouts = 1;
+        int miners = 16;
+        int scouts = 2;
+        int scoutCooldown = 0;
+        int cur = 2;
         while(true){
             try {
-                if(numScouts > 0){
+                if(scouts > 0 && scoutCooldown == 0){
                     MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
                     if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                        comms.addJob(myId,2);
+                        comms.addJob(myId, 1);
                         rc.buildRobot(RobotType.CARRIER, newLoc);
-                        numScouts--;
+                        scouts--;
+                        scoutCooldown = 50;
+                    }
+                }
+                if(scoutCooldown > 0) scoutCooldown--;
+                if(miners > 0){
+                    MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                    if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                        comms.addJob(myId, cur);
+                        if(cur == 2) cur = 3;
+                        else cur = 2;
+                        rc.buildRobot(RobotType.CARRIER, newLoc);
+                        miners--;
                     }
                 } 
             } catch (GameActionException e) {
@@ -192,11 +207,17 @@ public strictfp class RobotPlayer {
     static void runCarrier(RobotController rc) throws GameActionException { 
         int job = comms.getJob();
         if(job == 1){ //Scout
+            ScoutCarrier carrier = new ScoutCarrier(rc);
+            carrier.run();
         } else if(job == 2){ //Resource collector adamantium
             ResourceCarrier carrier = new ResourceCarrier(rc);
             carrier.run(ResourceType.ADAMANTIUM);
         } else if(job == 3){ //Resource collector mana
+            ResourceCarrier carrier = new ResourceCarrier(rc);
+            carrier.run(ResourceType.MANA);
         } else if(job == 4){ //Resource collector elixir
+            ResourceCarrier carrier = new ResourceCarrier(rc);
+            carrier.run(ResourceType.ELIXIR);
         }
     }
 
@@ -316,25 +337,25 @@ public strictfp class RobotPlayer {
                             rc.move(optimalDirection.rotateRight());
                             hasMoved = true;
                         }
-                    }
-                } else {
-                    Direction optimalCardinalDirection;
-                    if (optimalDirection.getDeltaX() != 0 && optimalDirection.getDeltaY() != 0){
-                        if(rng.nextBoolean()){
-                            optimalCardinalDirection = optimalDirection.rotateLeft();
+                    } else {
+                        Direction optimalCardinalDirection;
+                        if (optimalDirection.getDeltaX() != 0 && optimalDirection.getDeltaY() != 0){
+                            if(rng.nextBoolean()){
+                                optimalCardinalDirection = optimalDirection.rotateLeft();
+                            } else {
+                                optimalCardinalDirection = optimalDirection.rotateRight();
+                            }
                         } else {
-                            optimalCardinalDirection = optimalDirection.rotateRight();
+                            optimalCardinalDirection = optimalDirection;
                         }
-                    } else {
-                        optimalCardinalDirection = optimalDirection;
-                    }
-                    trackingObstacle = true;
-                    if(rng.nextBoolean()){
-                        movingDirection = optimalCardinalDirection.rotateLeft().rotateLeft();
-                        traversingClockwise = true;
-                    } else {
-                        movingDirection = optimalCardinalDirection.rotateRight().rotateRight();
-                        traversingClockwise = false;
+                        trackingObstacle = true;
+                        if(rng.nextBoolean()){
+                            movingDirection = optimalCardinalDirection.rotateLeft().rotateLeft();
+                            traversingClockwise = true;
+                        } else {
+                            movingDirection = optimalCardinalDirection.rotateRight().rotateRight();
+                            traversingClockwise = false;
+                        }
                     }
                 }
             }
@@ -368,21 +389,25 @@ public strictfp class RobotPlayer {
         int closestWell(ResourceType tarResource) throws GameActionException{
             int ret = -1;
             for(int i = 0; i < wells.length; i++){
-                if(wellTypes[i] == tarResource){
-                    if(ret == -1){
-                        ret = i;
-                    } else if(rc.getLocation().distanceSquaredTo(wells[i]) 
-                            < rc.getLocation().distanceSquaredTo(wells[ret])){
-                        ret = i;
+                if(prvWellVis[i] == 0 || prvWellVis[i] + 20 <= turnCount){
+                    if(wellTypes[i] == tarResource){
+                        if(ret == -1){
+                            ret = i;
+                        } else if(rc.getLocation().distanceSquaredTo(wells[i]) 
+                                < rc.getLocation().distanceSquaredTo(wells[ret])){
+                            ret = i;
+                        }
                     }
                 }
             }
             if(ret == -1){
                 for(int i = 0; i < wells.length; i++){
-                    if(ret == -1){
-                        ret = i;
-                    } else if(rc.getLocation().distanceSquaredTo(wells[i]) < rc.getLocation().distanceSquaredTo(target)){
-                        ret = i;
+                    if(prvWellVis[i] == 0 || prvWellVis[i] + 20 <= turnCount){
+                        if(ret == -1){
+                            ret = i;
+                        } else if(rc.getLocation().distanceSquaredTo(wells[i]) < rc.getLocation().distanceSquaredTo(target)){
+                            ret = i;
+                        }
                     }
                 }
             }
@@ -458,7 +483,7 @@ public strictfp class RobotPlayer {
         }
 
         void updateTargetHq() throws GameActionException{
-            MapLocation nxtTar = closestAdjacent(target);
+            MapLocation nxtTar = closestAdjacent(hqs[targetHqId]);
             if(nxtTar != null){
                 foundHome = true;
                 target = nxtTar;
@@ -475,11 +500,13 @@ public strictfp class RobotPlayer {
             if(wells.length == 0) return;
             targetWellId = closestWell(tarResource); 
             targetHqId = closestHq();
+            target = wells[targetWellId];
             while(true){
                 turnCount += 1;
                 try { 
-                    for(int t = 0; t < 3; t++){
-                        rc.setIndicatorString(String.valueOf(target.x) + " " + String.valueOf(target.y));
+                    if(target == null) rc.setIndicatorString("no target");
+                    else rc.setIndicatorString(String.valueOf(target.x) + " " + String.valueOf(target.y));
+                    for(int t = 0; t < 2; t++){
                         RobotInfo targets[] = rc.senseNearbyRobots();
                         if(rc.getWeight() >= 5){
                             for(int i = 0; i < targets.length; i++){
@@ -546,9 +573,10 @@ public strictfp class RobotPlayer {
                                             rc.transferResource(hqs[targetHqId], ResourceType.ELIXIR, rc.getResourceAmount(ResourceType.ELIXIR));
                                         }
                                     }
-                                    if(tarResource == ResourceType.ADAMANTIUM) tarResource = ResourceType.MANA;
-                                    else if(tarResource == ResourceType.MANA) tarResource = ResourceType.ADAMANTIUM;
-                                    //add stuff to make it go find more resources
+                                    foundHome = false;
+                                    goingHome = false;
+                                    targetWellId = closestWell(tarResource);
+                                    target = wells[targetWellId];
                                 }
                                 if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) 
                                         || !rc.senseMapInfo(target).isPassable())){                        
@@ -557,6 +585,88 @@ public strictfp class RobotPlayer {
                             }
                         }
                         move();
+                    }
+                } catch(GameActionException e){
+                    System.out.println(rc.getType() + " Exception");
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    System.out.println(rc.getType() + " Exception");
+                    e.printStackTrace();
+                } finally {
+                    Clock.yield();
+                }
+            }
+        }
+    }
+
+    private static class ScoutCarrier extends Pathfinding {
+
+        MapLocation hqs[]; //hq positions
+        int targetHqId; //target hq id
+        boolean goingHome; //going home
+        int turnCount;
+
+        int closestHq() throws GameActionException{
+            int ret = -1;
+            for(int i = 0; i < hqs.length; i++){
+                if(ret == -1){
+                    ret = i;
+                } else if(rc.getLocation().distanceSquaredTo(hqs[i]) < rc.getLocation().distanceSquaredTo(hqs[ret])){ 
+                    ret = i;
+                }
+            } 
+            return ret;
+        }
+
+        ScoutCarrier(RobotController rc_) throws GameActionException{
+            super(rc_);
+            hqs = comms.getHqs();
+            goingHome = false;
+            turnCount = 0;
+        }
+ 
+        void run() throws GameActionException{
+            targetHqId = closestHq();
+            Direction normalDir = Direction.CENTER; 
+            RobotInfo[] nearbyRobots = rc.senseNearbyRobots(2, rc.getTeam()); 
+            for (int i = 0; i < nearbyRobots.length; i++) {
+                if (nearbyRobots[i].getType() == RobotType.HEADQUARTERS && nearbyRobots[i].getTeam() == rc.getTeam()) {
+                    normalDir = rc.getLocation().directionTo(nearbyRobots[i].getLocation()).opposite();
+                    break;
+                }
+            }
+            WellInfo wells[] = new WellInfo[0];
+            while(true){
+                turnCount += 1;
+                try { 
+                    WellInfo[] nearbyWells = rc.senseNearbyWells();
+                    for (int i = 0; i < nearbyWells.length; i++) {
+                        if (!comms.wellExists(nearbyWells[i]) && nearbyWells[i].getResourceType() == ResourceType.ADAMANTIUM) {
+                            wells = nearbyWells;
+                            goingHome = true;
+                            target = hqs[closestHq()];
+                            break;
+                        }
+                    }
+                    if(goingHome){
+                        if(rc.canWriteSharedArray(0, 0)){
+                            for(int i = 0; i < wells.length; i++){
+                                comms.addWell(wells[i]);
+                            }
+                            ResourceCarrier carrier = new ResourceCarrier(rc);
+                            if(rng.nextBoolean()) carrier.run(ResourceType.ADAMANTIUM);
+                            else carrier.run(ResourceType.MANA);
+                        }
+                        move();
+                    } else {
+                        for (int i = 0; i < 2; i++) {
+                            while (!rc.canMove(normalDir))
+                                normalDir = normalDir.rotateRight();
+                            rc.move(normalDir);
+                            if (rng.nextBoolean())
+                                normalDir = normalDir.rotateRight();
+                            rc.setIndicatorString(normalDir.name() + " | move in normal direction");
+                        }
                     }
                 } catch(GameActionException e){
                     System.out.println(rc.getType() + " Exception");
