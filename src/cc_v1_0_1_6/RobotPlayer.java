@@ -41,7 +41,7 @@ public strictfp class RobotPlayer {
     static short lastRefresh = 0;
 
     // Launchers don't move until in large enough group
-    static boolean active = false;
+    static boolean active = true;
     static int moveCount = 0;
 
     static final Direction[] directions = {
