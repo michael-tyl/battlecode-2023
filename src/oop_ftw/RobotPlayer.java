@@ -115,7 +115,7 @@ public strictfp class RobotPlayer {
             int cur = 0;
             int x = v.getMapLocation().x*60 + v.getMapLocation().y + 1;
             while(true){
-                int y = getRange(0, 11, cur);
+                int y = getRange(0, 11, 4 + cur);
                 if(y == 0) break;
                 if(y == x) return true;
                 cur++;

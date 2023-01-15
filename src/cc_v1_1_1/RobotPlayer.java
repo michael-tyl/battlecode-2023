@@ -150,7 +150,7 @@ public strictfp class RobotPlayer {
             int cur = 0;
             int x = v.getMapLocation().x*60 + v.getMapLocation().y + 1;
             while(true){
-                int y = getRange(0, 11, cur);
+                int y = getRange(0, 11, 4 + cur);
                 if(y == 0) break;
                 if(y == x) return true;
                 cur++;
@@ -801,9 +801,10 @@ public strictfp class RobotPlayer {
         }
  
         void run() throws GameActionException{
+            System.out.println("new scout");
             targetHqId = closestHq();
             Direction normalDir = Direction.CENTER; 
-            RobotInfo[] nearbyRobots = rc.senseNearbyRobots(2, rc.getTeam()); 
+            RobotInfo[] nearbyRobots = rc.senseNearbyRobots(-1, rc.getTeam()); 
             for (int i = 0; i < nearbyRobots.length; i++) {
                 if (nearbyRobots[i].getType() == RobotType.HEADQUARTERS && nearbyRobots[i].getTeam() == rc.getTeam()) {
                     normalDir = rc.getLocation().directionTo(nearbyRobots[i].getLocation()).opposite();
@@ -816,7 +817,7 @@ public strictfp class RobotPlayer {
                 try { 
                     WellInfo[] nearbyWells = rc.senseNearbyWells();
                     for (int i = 0; i < nearbyWells.length; i++) {
-                        if (!comms.wellExists(nearbyWells[i]) && nearbyWells[i].getResourceType() == ResourceType.ADAMANTIUM) {
+                        if (!comms.wellExists(nearbyWells[i])) {
                             wells = nearbyWells;
                             goingHome = true;
                             target = hqs[closestHq()];

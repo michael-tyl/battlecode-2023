@@ -93,7 +93,7 @@ static private class Communication {
         int cur = 0;
         int x = v.getMapLocation().x*60 + v.getMapLocation().y + 1;
         while(true){
-            int y = getRange(0, 11, cur);
+            int y = getRange(0, 11, 4 + cur);
             if(y == 0) break;
             if(y == x) return true;
             cur++;
@@ -123,16 +123,4 @@ static private class Communication {
         if(getRange(12, 15, hq) == 0) setRange(12, 15, hq, v);
         else setRange(12, 15, 14 + hq, v);
     }
-}
-
-static Communication comms;
-
-@SuppressWarnings("unused")
-public static void run(RobotController rc) throws GameActionException {
-    comms = new Communication(rc);
-    switch (rc.getType()){
-        case HEADQUARTERS: runHeadquarters(rc); break;
-        case CARRIER: runCarrier(rc); break;
-    }
-    return;
 }
