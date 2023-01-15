@@ -303,7 +303,7 @@ public strictfp class RobotPlayer {
                         // Frequency of scout building
                         int sctFreq = 10;
 
-                        if(numScouts > 0 && turnCount - prvScout >= sctFreq && numFriendlies < 17){
+                        if(numScouts > 0 && turnCount - prvScout >= sctFreq && numFriendlies < 27){
                             MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
                             if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
                                 comms.addJob(myId,1);
@@ -311,7 +311,7 @@ public strictfp class RobotPlayer {
                                 built = true;
                                 numScouts--;
                             }
-                        } else if (turnCount - prvScout < sctFreq) {
+                        } else if (numFriendlies < 27) {
                             MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
                             if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
                                 comms.addJob(myId,2);
