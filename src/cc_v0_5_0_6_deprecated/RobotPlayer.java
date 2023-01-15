@@ -1,4 +1,4 @@
-package cc_v0_5_0_7;
+package cc_v0_5_0_6_deprecated;
 
 import battlecode.common.*;
 
