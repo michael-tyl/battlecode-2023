@@ -368,7 +368,7 @@ public strictfp class RobotPlayer {
                 }
             }
         }
-    }
+    } 
 
     private static class ResourceCarrier extends Pathfinding {
 
@@ -653,7 +653,7 @@ public strictfp class RobotPlayer {
                 try { 
                     WellInfo[] nearbyWells = rc.senseNearbyWells();
                     for (int i = 0; i < nearbyWells.length; i++) {
-                        if (!comms.wellExists(nearbyWells[i]) && nearbyWells[i].getResourceType() == ResourceType.ADAMANTIUM) {
+                        if (!comms.wellExists(nearbyWells[i])) {
                             wells = nearbyWells;
                             goingHome = true;
                             target = hqs[closestHq()];

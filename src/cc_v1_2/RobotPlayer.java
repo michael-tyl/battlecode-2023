@@ -246,7 +246,7 @@ public strictfp class RobotPlayer {
         int miners = 16;
         int scouts = 2;
         int scoutCooldown = 0;
-        int cur = 2;
+        int cur = 0;
         
         Direction[] stkDir = new Direction[8];
         stkDir[0] = hqLoc.directionTo(enemyHQ);
@@ -257,7 +257,15 @@ public strictfp class RobotPlayer {
         stkDir[5] = stkDir[0].rotateLeft().rotateLeft().rotateLeft();
         stkDir[6] = stkDir[0].rotateRight().rotateRight().rotateRight();
         stkDir[7] = stkDir[0].rotateLeft().rotateLeft().rotateLeft();
-        
+        if(scouts > 0 && scoutCooldown == 0){
+            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                comms.addJob(myId, 1);
+                rc.buildRobot(RobotType.CARRIER, newLoc);
+                scouts--;
+                scoutCooldown = 200;
+            }
+        }
         while(true){
             turnCount += 1;
             try {
@@ -286,53 +294,6 @@ public strictfp class RobotPlayer {
                             anchorBuilt = true;
                         }
                     }
-                    if (!anchorBuilt){ 
-                        // Frequency of scout building
-                        int sctFreq = 10;
-
-                        // if(numScouts > 0 && turnCount - prvScout >= sctFreq && numFriendlies < 27){
-                        //     MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
-                        //     if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                        //         comms.addJob(myId,1);
-                        //         rc.buildRobot(RobotType.CARRIER, newLoc);
-                        //         built = true;
-                        //         numScouts--;
-                        //     }
-                        // } else if (numFriendlies < 27) {
-                        if(scouts > 0 && scoutCooldown == 0){
-                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
-                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                                comms.addJob(myId, 1);
-                                rc.buildRobot(RobotType.CARRIER, newLoc);
-                                scouts--;
-                                built = true;
-                                scoutCooldown = 50;
-                            }
-                        }
-                        if(scoutCooldown > 0) scoutCooldown--;
-                        if(!built && miners > 0){
-                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
-                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                                comms.addJob(myId, cur);
-                                if(cur == 2) cur = 3;
-                                else cur = 2;
-                                rc.buildRobot(RobotType.CARRIER, newLoc);
-                                miners--;
-                            }
-                        } 
-                        if (numFriendlies < 32 && !built) {
-                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
-                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                                comms.addJob(myId,2);
-                                rc.buildRobot(RobotType.CARRIER, newLoc);
-                                built = true;
-                            }
-                        }
-                    } else {
-                        anchor_cooldown = 50;
-                        anchors_built++;
-                        carrierOverride = true;
-                    }
                     if (!built) {
                         for (int i = 0; i < friendlies.length && !built; i++) {
                             if (friendlies[i].getType() == RobotType.LAUNCHER) {
@@ -358,14 +319,68 @@ public strictfp class RobotPlayer {
                                 if (numFriendlies < 42 && turnCount < 1750 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
                                     rc.setIndicatorString("Trying to build a laucher");
                                     rc.buildRobot(RobotType.LAUNCHER, newLoc);
-                                } else if (((numFriendlies < 20 && turnCount < 1750) || carrierOverride) && rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
+                                } 
+                                /*else if (((numFriendlies < 20 && turnCount < 1750) || carrierOverride) && rc.canBuildRobot(RobotType.CARRIER, newLoc)) {
                                     comms.addJob(myId,5);
                                     rc.buildRobot(RobotType.CARRIER, newLoc);
-                                }
+                                }*/
                             }
 
                         }
                     }
+                    if (!anchorBuilt){ 
+                        // Frequency of scout building
+                        int sctFreq = 10;
+
+                        // if(numScouts > 0 && turnCount - prvScout >= sctFreq && numFriendlies < 27){
+                        //     MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                        //     if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                        //         comms.addJob(myId,1);
+                        //         rc.buildRobot(RobotType.CARRIER, newLoc);
+                        //         built = true;
+                        //         numScouts--;
+                        //     }
+                        // } else if (numFriendlies < 27) {
+                        if(scouts > 0 && scoutCooldown == 0){
+                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                                comms.addJob(myId, 1);
+                                rc.buildRobot(RobotType.CARRIER, newLoc);
+                                scouts--;
+                                built = true;
+                                scoutCooldown = 200;
+                            }
+                        }
+                        if(scoutCooldown > 0) scoutCooldown--;
+                        if(!built && miners > 0){
+                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                                if(cur == 0) comms.addJob(myId, 3);
+                                else if(cur == 1) comms.addJob(myId, 2);
+                                else if(cur == 2) comms.addJob(myId, 3);
+                                cur++;
+                                cur %= 2;
+                                rc.buildRobot(RobotType.CARRIER, newLoc);
+                                miners--;
+                            }
+                        } 
+                        if (numFriendlies < 32 && !built) {
+                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                                if(cur == 0) comms.addJob(myId, 3);
+                                else if(cur == 1) comms.addJob(myId, 2);
+                                else if(cur == 2) comms.addJob(myId, 3);
+                                cur++;
+                                cur %= 2;
+                                rc.buildRobot(RobotType.CARRIER, newLoc);
+                                built = true;
+                            }
+                        }
+                    } else {
+                        anchor_cooldown = 50;
+                        anchors_built++;
+                        carrierOverride = true;
+                    } 
 
                 } else {
                     int curVal = rc.readSharedArray(63);
@@ -843,7 +858,7 @@ public strictfp class RobotPlayer {
                 try { 
                     WellInfo[] nearbyWells = rc.senseNearbyWells();
                     for (int i = 0; i < nearbyWells.length; i++) {
-                        if (!comms.wellExists(nearbyWells[i])) {
+                        if (!comms.wellExists(nearbyWells[i]) && nearbyWells[i].getResourceType() == ResourceType.MANA) {
                             wells = nearbyWells;
                             goingHome = true;
                             target = hqs[closestHq()];
