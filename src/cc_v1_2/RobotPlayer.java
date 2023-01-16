@@ -1,4 +1,4 @@
-package michael_v1_2;
+package cc_v1_2;
 
 
 import battlecode.common.*;
