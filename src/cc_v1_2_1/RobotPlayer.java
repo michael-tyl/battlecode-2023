@@ -269,6 +269,7 @@ public strictfp class RobotPlayer {
         while(true){
             turnCount += 1;
             try {
+        if (turnCount > 750) rc.resign();
                 boolean built = false;
                 RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam());
                 numFriendlies = friendlies.length;
@@ -1065,6 +1066,16 @@ public strictfp class RobotPlayer {
         } 
     }
 
+    static int activeThreshold(int turn) {
+        int thr = 0;
+        turn -= 20;
+        while (turn > 0) {
+            turn /= 7;
+            thr++;
+        }
+        return 0;
+    }
+
     static void runLauncher(RobotController rc) throws GameActionException {
         int prevHealth = rc.getType().health;
         boolean prevEscape = false;
@@ -1138,30 +1149,39 @@ public strictfp class RobotPlayer {
                 int launcherCount = 1;
                 int xSum = curLoc.x;
                 int ySum = curLoc.y;
+                RobotInfo[] closeFriendlies = rc.senseNearbyRobots(vision-12, rc.getTeam());
                 for (int i = 0; i < friendlies.length; i++) {
                     if (friendlies[i].getType() != RobotType.LAUNCHER) continue;
                     launcherCount++;
                     // Activate in groups of at least x size
-                    if (launcherCount >= 3) {
+                    if (launcherCount >= activeThreshold(turnCount)) {
                         active = true;
                     }
                     xSum += friendlies[i].getLocation().x;
                     ySum += friendlies[i].getLocation().y;
+                }
+                int lcount2 = 1;
+                for (int i = 0; i < closeFriendlies.length; i++) {
+                    if (closeFriendlies[i].getType() != RobotType.LAUNCHER) continue;
+                    lcount2++;
+                    // Activate in groups of at least x size
+                    if (lcount2 >= activeThreshold(turnCount)) {
+                        active = true;
+                    }
                 }
                 xSum /= launcherCount;
                 ySum /= launcherCount;
                 MapLocation centerMass = new MapLocation(xSum, ySum);
 
                 Direction enemyHQDir = centerMass.directionTo(enemyHQ);
-                MapLocation oldCM = new MapLocation(xSum, ySum);
                 centerMass = centerMass.add(enemyHQDir);
+                MapLocation oldCM = centerMass.add(enemyHQDir);
                 rc.setIndicatorString("Center mass target: " + centerMass.toString());
-                // centerMass = centerMass.add(enemyHQDir);
+                centerMass = centerMass.add(enemyHQDir);
 
                 // if (!leader && !chase) {
                 //     dir = curLoc.directionTo(centerMass);
                 // }
-
 
                 
                 // Try moving towards center of mass shifted towards enemy HQ
@@ -1192,7 +1212,8 @@ public strictfp class RobotPlayer {
                 boolean needToReturn = toCenter == toEnemy || toCenter.rotateLeft() == toEnemy || toCenter.rotateLeft().rotateLeft() == toEnemy
                                                         || toCenter.rotateRight() == toEnemy || toCenter.rotateRight().rotateRight() == toEnemy;
                 needToReturn = !needToReturn;
-                if (toEnemy == Direction.CENTER || toCenter == Direction.CENTER) needToReturn = false;
+                if (toEnemy == Direction.CENTER || toCenter == Direction.CENTER || curLoc.directionTo(oldCM) == Direction.CENTER) needToReturn = false;
+                // if (turnCount > 100) needToReturn = false;
                 if (rc.getHealth() < prevHealth || numEnemyLaunchers > launcherCount + 1 || needToReturn || (numEnemyLaunchers >= 1 && launcherCount == 1 && hp2 > rc.getHealth())) {
                     dir = curLoc.directionTo(hqLoc);
                     if (target != null) rc.attack(target);
@@ -1208,7 +1229,42 @@ public strictfp class RobotPlayer {
                 }
                 prevHealth = rc.getHealth();
 
-                if (turnCount >= 20) {
+                int lim = 11;
+                int lim2 = 24;
+                if (turnCount < lim) {
+                    if ((rc.senseMapInfo(curLoc.add(dir)).hasCloud() && !rc.senseMapInfo(curLoc).hasCloud())) {
+                        rc.setIndicatorString("Avoiding cloud");
+                        dir = dir.rotateLeft();
+
+                    }
+                    if ((rc.senseMapInfo(curLoc.add(dir)).hasCloud() && !rc.senseMapInfo(curLoc).hasCloud())) {
+                        rc.setIndicatorString("Avoiding cloud");
+                        dir = dir.rotateRight();
+                        dir = dir.rotateRight();
+                    }
+                    if (rc.senseMapInfo(curLoc.add(dir)).hasCloud()) dir = dir.rotateLeft();
+                    if (rc.senseMapInfo(curLoc.add(dir)).hasCloud() && numFriendlies > 1) dir = Direction.CENTER;
+                } else if (turnCount < lim2) {
+                    if (rc.senseMapInfo(curLoc.add(dir)).hasCloud() && numFriendlies > 1) dir = Direction.CENTER;
+                    if (!rc.canMove(dir) || (rc.senseMapInfo(curLoc.add(dir)).hasCloud() && !rc.senseMapInfo(curLoc).hasCloud())) {
+                        rc.setIndicatorString("Avoiding cloud or barrier");
+                        dir = dir.rotateLeft();
+                    }
+                    if (!rc.canMove(dir) || (rc.senseMapInfo(curLoc.add(dir)).hasCloud() && !rc.senseMapInfo(curLoc).hasCloud())) {
+                        rc.setIndicatorString("Avoiding cloud or barrier");
+                        dir = dir.rotateLeft();
+                    }
+                    if (!rc.canMove(dir) || (rc.senseMapInfo(curLoc.add(dir)).hasCloud() && !rc.senseMapInfo(curLoc).hasCloud())) {
+                        rc.setIndicatorString("Avoiding cloud or barrier");
+                        dir = dir.rotateRight();
+                        dir = dir.rotateRight();
+                        dir = dir.rotateRight();
+                    }
+                    if (!rc.canMove(dir) || (rc.senseMapInfo(curLoc.add(dir)).hasCloud() && !rc.senseMapInfo(curLoc).hasCloud())) {
+                        rc.setIndicatorString("Avoiding cloud or barrier");
+                        dir = dir.rotateRight();
+                    }
+                } else {
                     // Try avoiding clouds
                     if (!rc.canMove(dir) || (rc.senseMapInfo(curLoc.add(dir)).hasCloud() && !rc.senseMapInfo(curLoc).hasCloud())) {
                         rc.setIndicatorString("Avoiding cloud or barrier");
@@ -1237,12 +1293,11 @@ public strictfp class RobotPlayer {
                         j++;
                     }
 
-                } else {
-                    if (rc.senseMapInfo(curLoc.add(dir)).hasCloud() && numFriendlies > 1) dir = Direction.CENTER;
                 }
+                
 
                 // Move x times to prevent crowding HQ
-                if ((moveCount < 4 || active || rc.senseMapInfo(curLoc).hasCloud()) && rc.canMove(dir)) {
+                if ((moveCount < rc.getMapHeight() / 6 || active || rc.senseMapInfo(curLoc).hasCloud()) && rc.canMove(dir)) {
                     rc.move(dir);
                     moveCount++;
                 }
@@ -1282,7 +1337,7 @@ public strictfp class RobotPlayer {
                     if (target != null) {    
                         rc.attack(target);
 
-                        if (rc.senseRobotAtLocation(target) == null) {
+                        if (rc.canSenseLocation(target) && rc.senseRobotAtLocation(target) == null) {
                             if (curEnemy+1 >= enemies.length) {
                                 prevTarget = null;
                                 dir = directions[rng.nextInt(directions.length)];
