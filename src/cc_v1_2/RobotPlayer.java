@@ -777,7 +777,7 @@ public strictfp class RobotPlayer {
                                 if(rc.getLocation().equals(target)){
                                     while(rc.getWeight() > 0){
                                         while(!rc.canTransferResource(hqs[targetHqId], ResourceType.ADAMANTIUM, 1) && 
-                                            !rc.canTransferResource(hqs[targetHqId], ResourceType.ADAMANTIUM, 1) &&
+                                                !rc.canTransferResource(hqs[targetHqId], ResourceType.ADAMANTIUM, 1) &&
                                                 !rc.canTransferResource(hqs[targetHqId], ResourceType.MANA, 1)){
                                             Clock.yield();
                                         }
