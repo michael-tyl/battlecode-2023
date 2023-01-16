@@ -269,7 +269,7 @@ public strictfp class RobotPlayer {
         while(true){
             turnCount += 1;
             try {
-        if (turnCount > 750) rc.resign();
+                // if (turnCount > 750) rc.resign();
                 boolean built = false;
                 RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam());
                 numFriendlies = friendlies.length;
