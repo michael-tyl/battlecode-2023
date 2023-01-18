@@ -1,4 +1,4 @@
-package launcher_v2_0;
+package launcher_v2;
 
 import battlecode.common.*;
 
