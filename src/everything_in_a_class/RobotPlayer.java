@@ -155,6 +155,16 @@ public strictfp class RobotPlayer {
             if(rc.getType() == RobotType.CARRIER) return getRange(15, 15, 4) == 1;
             return false;
         }
+
+        //Sets the target of a group of launchers
+        void setGroupTarget(int x, MapLocation v) throws GameActionException {
+            setRange(0, 11, 20 + x, v.x*60 + v.y + 1);
+        }
+
+        MapLocation getGroupTarget(int x) throws GameActionException {
+            int v = getRange(0, 11, 20 + x);
+            return new MapLocation((v - 1)/60, (v - 1)%60);
+        }
     }
 
     static Communication comms;
@@ -170,6 +180,7 @@ public strictfp class RobotPlayer {
         return;
     }
 
+    static int numLauncherGroups = 1;
 
     static void runHeadquarters(RobotController rc) throws GameActionException {
         Headquarters headquarters = new Headquarters(rc);
@@ -183,265 +194,17 @@ public strictfp class RobotPlayer {
             carrier.run();
         } else if(job == 2){ //Resource collector adamantium
             ResourceCarrier carrier = new ResourceCarrier(rc);
-            carrier.run(ResourceType.ADAMANTIUM);
+            carrier.run(ResourceType.ADAMANTIUM, 39);
         } else if(job == 3){ //Resource collector mana
             ResourceCarrier carrier = new ResourceCarrier(rc);
-            carrier.run(ResourceType.MANA);
-        } else if(job == 4){ //Resource collector elixir
-            ResourceCarrier carrier = new ResourceCarrier(rc);
-            carrier.run(ResourceType.ELIXIR);
+            carrier.run(ResourceType.MANA, 39);
+        } else if(job == 4){
         }
     }
 
     static void runLauncher(RobotController rc) throws GameActionException {
-        int prevHealth = rc.getType().health;
-        int turnCount = 0;
-        MapLocation prevTarget = null;
-        MapLocation enemyHQ = null;
-        MapLocation hqLoc = rc.getLocation();
-        if (rc.getType() != RobotType.HEADQUARTERS) {
-            RobotInfo[] friendlies = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam());
-            for (int i = 0; i < friendlies.length; i++) {
-                if (friendlies[i].getType() == RobotType.HEADQUARTERS) {
-                    hqLoc = friendlies[i].getLocation();
-                    break;
-                }
-            }
-            // numFriendlies = friendlies.length;
-        }
-
-        enemyHQ = new MapLocation(Math.abs(rc.getMapWidth() - 1 - hqLoc.x), Math.abs(rc.getMapHeight() - 1 - hqLoc.y));
-
-        int lastRefresh = 0;
-
-        boolean active = true;
-        int moveCount = 0;
-        while (true) {
-            turnCount += 1;
-            try {
-                // Try to attack someone
-                int radius = rc.getType().actionRadiusSquared;
-                int vision = rc.getType().visionRadiusSquared;
-                Team opponent = rc.getTeam().opponent();
-                RobotInfo[] enemies = rc.senseNearbyRobots(vision, opponent);
-                RobotInfo[] friendlies = rc.senseNearbyRobots(vision, rc.getTeam());
-
-                MapLocation curLoc = rc.getLocation();
-
-                // Leave null for now
-                Direction dir = null;
-
-                // Move towards previous target, if available
-                if (prevTarget != null) {
-                    dir = curLoc.directionTo(prevTarget);
-                    lastRefresh++;
-                }
-                if (lastRefresh >= 3) {
-                    prevTarget = null;
-                }
-
-                boolean chase = false;
-                int curEnemy = 0;
-                MapLocation target = null;
-                int launcherID = 999999;
-                int launcherHP = 999999;
-                boolean launcher = false;
-                // Make sure not attacking HQ
-                while (curEnemy < enemies.length) {
-                    MapLocation toAttack = enemies[curEnemy].location;
-
-                    if (enemies[curEnemy].type == RobotType.HEADQUARTERS) {
-                        curEnemy++;
-                        dir = curLoc.directionTo(toAttack);
-                        continue;
-                    }
-
-                    // MapLocation toAttack = rc.getLocation().add(Direction.EAST);
-
-                    if (rc.canAttack(toAttack)) {
-                        if (target == null 
-                            || (enemies[curEnemy].getType() == RobotType.LAUNCHER && launcher == false)
-                            || (enemies[curEnemy].getHealth() == launcherHP && enemies[curEnemy].getID() < launcherID && (enemies[curEnemy].getType() == RobotType.LAUNCHER || !launcher))
-                            || (enemies[curEnemy].getHealth() < launcherHP && (enemies[curEnemy].getType() == RobotType.LAUNCHER || !launcher))) {
-                            target = toAttack;
-                            if (enemies[curEnemy].getType() == RobotType.LAUNCHER) launcher = true;
-                            launcherHP = enemies[curEnemy].getHealth();
-                            launcherID = enemies[curEnemy].getID();
-                        }
-                    } else {
-                        dir = curLoc.directionTo(toAttack);
-                        prevTarget = toAttack;
-                        lastRefresh = 0;
-                        rc.setIndicatorString("Chasing enemy in vision");
-                    }
-                    curEnemy++;
-                }
-
-
-                
-                
-                // TODO: Better criteria than lowest ID
-                // Current form is worse than v0.3, currently not used to set direction
-                // boolean leader = true;
-
-                int launcherCount = 1;
-                int xSum = curLoc.x;
-                int ySum = curLoc.y;
-                if (!active) for (int i = 0; i < friendlies.length; i++) {
-                    if (friendlies[i].getType() != RobotType.LAUNCHER) continue;
-                    launcherCount++;
-                    // Activate in groups of at least x size
-                    if (launcherCount >= 3) {
-                        active = true;
-                        rc.setIndicatorString("Active!");
-                    }
-                    xSum += friendlies[i].getLocation().x;
-                    ySum += friendlies[i].getLocation().y;
-                }
-                xSum /= launcherCount;
-                ySum /= launcherCount;
-                MapLocation centerMass = new MapLocation(xSum, ySum);
-                rc.setIndicatorString("Center mass: " + xSum + " " + ySum);
-
-                Direction enemyHQDir = centerMass.directionTo(enemyHQ);
-                centerMass = centerMass.add(enemyHQDir);
-                // centerMass = centerMass.add(enemyHQDir);
-
-                // if (!leader && !chase) {
-                //     dir = curLoc.directionTo(centerMass);
-                // }
-
-
-                
-                // Try moving towards center of mass shifted towards enemy HQ
-                if (dir == null) {
-                    dir = curLoc.directionTo(centerMass);
-                }
-
-                // Move towards HQ if health decreased
-                boolean escape = false;
-                if (rc.getHealth() < prevHealth) {
-                    dir = curLoc.directionTo(hqLoc);
-                    rc.attack(target);
-                    escape = true;
-                }
-                prevHealth = rc.getHealth();
-
-                // Try avoiding clouds
-                if (!rc.canMove(dir) || rc.senseMapInfo(curLoc.add(dir)).hasCloud()) {
-                    rc.setIndicatorString("Avoiding cloud or barrier");
-                    dir = dir.rotateLeft();
-                }
-                if (!rc.canMove(dir) || rc.senseMapInfo(curLoc.add(dir)).hasCloud()) {
-                    rc.setIndicatorString("Avoiding cloud or barrier");
-                    dir = dir.rotateRight();
-                    dir = dir.rotateRight();
-                }
-                if (!rc.canMove(dir) || rc.senseMapInfo(curLoc.add(dir)).hasCloud()) {
-                    rc.setIndicatorString("Avoiding cloud or barrier");
-                    dir = dir.rotateLeft();
-                    dir = dir.rotateLeft();
-                    dir = dir.rotateLeft();
-                    dir = dir.rotateLeft();
-                }
-                if (!rc.canMove(dir) || rc.senseMapInfo(curLoc.add(dir)).hasCloud()) {
-                    rc.setIndicatorString("Avoiding cloud or barrier");
-                    dir = dir.rotateRight();
-                    dir = dir.rotateRight();
-                    dir = dir.rotateRight();
-                    dir = dir.rotateRight();
-                    dir = dir.rotateRight();
-                    dir = dir.rotateRight();
-                }
-
-                // Try moving randomly
-                int j = 0;
-                while (!rc.canMove(dir) && j < 20) {
-                    dir = directions[rng.nextInt(directions.length)];
-
-                    j++;
-                }
-
-                // Move x times to prevent crowding HQ
-                if ((moveCount < 4 || active || rc.senseMapInfo(curLoc).hasCloud()) && rc.canMove(dir)) {
-                    rc.move(dir);
-                    moveCount++;
-                }
-
-                if (!escape) {
-                    // Identify new target after moving
-                    curEnemy = 0;
-                    while (curEnemy < enemies.length) {
-                        MapLocation toAttack = enemies[curEnemy].location;
-
-                        if (enemies[curEnemy].type == RobotType.HEADQUARTERS) {
-                            curEnemy++;
-                            dir = curLoc.directionTo(toAttack);
-                            continue;
-                        }
-
-                        // MapLocation toAttack = rc.getLocation().add(Direction.EAST);
-                        if (rc.canAttack(toAttack)) {
-                            if (target == null 
-                                || (enemies[curEnemy].getType() == RobotType.LAUNCHER && launcher == false)
-                                || (enemies[curEnemy].getHealth() == launcherHP && enemies[curEnemy].getID() < launcherID && (enemies[curEnemy].getType() == RobotType.LAUNCHER || !launcher))
-                                || (enemies[curEnemy].getHealth() < launcherHP && (enemies[curEnemy].getType() == RobotType.LAUNCHER || !launcher))) {
-                                target = toAttack;
-                                if (enemies[curEnemy].getType() == RobotType.LAUNCHER) launcher = true;
-                                launcherHP = enemies[curEnemy].getHealth();
-                                launcherID = enemies[curEnemy].getID();
-                            }
-                        } else {
-                            dir = curLoc.directionTo(toAttack);
-                            prevTarget = toAttack;
-                            lastRefresh = 0;
-                            rc.setIndicatorString("Chasing enemy in vision");
-                        }
-                        curEnemy++;
-                    }
-
-                    // Attack after moving
-                    if (target != null) {
-                        rc.setIndicatorString("Attacking");        
-                        rc.attack(target);
-
-                        if (enemies[curEnemy].health <= 0) {
-                            if (curEnemy+1 >= enemies.length) {
-                                prevTarget = null;
-                                dir = directions[rng.nextInt(directions.length)];
-                            } else {
-                                prevTarget = enemies[curEnemy-1].getLocation();
-                            }
-                        } else {
-                            dir = curLoc.directionTo(target);
-                            chase = true;
-                            prevTarget = target;
-                        }
-
-                        lastRefresh = 0;
-                    }
-                }
-
-                
-            }  catch (GameActionException e) {
-                // Oh no! It looks like we did something illegal in the Battlecode world. You should
-                // handle GameActionExceptions judiciously, in case unexpected events occur in the game
-                // world. Remember, uncaught exceptions cause your robot to explode!
-                System.out.println(rc.getType() + " Exception");
-                e.printStackTrace();
-
-            } catch (Exception e) {
-                // Oh no! It looks like our code tried to do something bad. This isn't a
-                // GameActionException, so it's more likely to be a bug in our code.
-                System.out.println(rc.getType() + " Exception");
-                e.printStackTrace();
-
-            } finally {
-                // Signify we've done everything we want to do, thereby ending our turn.
-                // This will make our code wait until the next turn, and then perform this loop again.
-                Clock.yield();
-            }
-        }
+        DefaultLauncher launcher = new DefaultLauncher(rc);
+        launcher.run();
     }
 
     private static class Headquarters {
@@ -463,6 +226,9 @@ public strictfp class RobotPlayer {
             WellInfo wells[] = rc.senseNearbyWells();
             for(int i = 0; i < wells.length; i++){
                 comms.addWell(wells[i]);
+            }
+            for(int i = 0; i < numLauncherGroups; i++){
+                comms.setGroupTarget(i, new MapLocation(rc.getMapWidth()/2, rc.getMapHeight()/2));
             }
             comms.setPos(myIndex, rc.getLocation());
             visible = rc.senseNearbyMapInfos();
@@ -544,6 +310,7 @@ public strictfp class RobotPlayer {
             int turnCount = 0;
             while(true){
                 turnCount++;
+                if(turnCount > 500) rc.resign();
                 try {
                     updateData();
                     qJob.clear();
@@ -591,36 +358,28 @@ public strictfp class RobotPlayer {
         RobotController rc;
         RobotInfo allies[];
         RobotInfo enemies[];
+        int myGroup;
+        MapLocation target;
 
-        DefaultLauncher(RobotController rc_){
+        DefaultLauncher(RobotController rc_) throws GameActionException{
             rc = rc_;
-            updateData();
+            myGroup = rc.getID()%numLauncherGroups;
         }
 
 
-        void updateData(){
-            RobotInfo nearby[] = rc.senseNearbyRobots();
-            int ac = 0, ec = 0;
-            for(int i = 0; i < nearby.length; i++){
-                if(nearby[i].getTeam() == rc.getTeam()) ac++;
-                else ec++;
-            }
-            allies = new RobotInfo[ac];
-            enemies = new RobotInfo[ec];
-            ac = 0;
-            ec = 0;
-            for(int i = 0; i < nearby.length; i++){
-                allies[ac++] = nearby[i];
-                enemies[ec++] = nearby[i];
-            }
+        void updateData() throws GameActionException{
+            allies = rc.senseNearbyRobots(-1, rc.getTeam());
+            enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+            target = comms.getGroupTarget(myGroup);
         }
 
-        MapLocation centerOfMass(){
-            int sumx = 0;
-            int sumy = 0;
-            int cnt = 0;
+        MapLocation centerOfMass() throws GameActionException {
+            int sumx = rc.getLocation().x;
+            int sumy = rc.getLocation().y;
+            int cnt = 1;
             for(int i = 0; i < allies.length; i++){
-                if(allies[i].getType() == RobotType.LAUNCHER){
+                if(allies[i].getType() == RobotType.LAUNCHER && 
+                        allies[i].getID()%numLauncherGroups == myGroup){
                     sumx += allies[i].getLocation().x;
                     sumy += allies[i].getLocation().y;
                     cnt++;
@@ -629,6 +388,96 @@ public strictfp class RobotPlayer {
             return new MapLocation(sumx/cnt, sumy/cnt);
         }
 
+        int getTargetEnemy() throws GameActionException {
+            int ret = -1;
+            for(int i = 0; i < enemies.length; i++){
+                if(enemies[i].getType() != RobotType.LAUNCHER) continue;
+                if(ret == -1){
+                    ret = i;
+                } else if(enemies[i].getID() < enemies[ret].getID()){
+                    ret = i;
+                }
+            }
+            if(ret == -1){
+                for(int i = 0; i < enemies.length; i++){
+                    if(enemies[i].getType() == RobotType.HEADQUARTERS) continue;
+                    if(ret == -1){
+                        ret = i;
+                    } else if(enemies[i].getID() < enemies[ret].getID()){
+                        ret = i;
+                    }
+                }
+            }
+            return ret;
+        }
+
+        void run() throws GameActionException {
+            boolean active = false;
+            while(true){
+                try {
+                    updateData();
+                    int radius = rc.getType().actionRadiusSquared;
+                    MapLocation curPos = rc.getLocation();
+                    int tar = getTargetEnemy();
+                    if(tar != -1){
+                        int dist = curPos.distanceSquaredTo(enemies[tar].getLocation());
+                        MapLocation enemyPos = enemies[tar].getLocation();
+                        if(dist > radius){ //go forward to attack
+                            boolean moved = false;
+                            for(int i = 0; i < 8; i++){
+                                if(curPos.add(directions[i]).distanceSquaredTo(enemyPos) <= radius){
+                                    if(rc.canMove(directions[i])){
+                                        rc.move(directions[i]);
+                                        moved = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if(moved){
+                                if(rc.canActLocation(enemyPos)){
+                                    rc.attack(enemyPos);
+                                }
+                            } else {
+                            }
+                        } else {
+                            if(rc.canAttack(enemyPos)){
+                                rc.attack(enemyPos);
+                            }
+                        }
+                    } else {
+                        int nearbyLaunchers = 1;
+                        for(int i = 0; i < allies.length; i++){
+                            if(allies[i].getType() == RobotType.LAUNCHER){
+                                nearbyLaunchers++;
+                            }
+                        }
+                        MapLocation com = centerOfMass(); 
+                        Direction tarDir = com.directionTo(target);
+                        MapLocation tarPos = com.add(tarDir);
+                        Direction nxtDir = Direction.CENTER;
+                        for(int i = 0; i < 8; i++){
+                            if(rc.canMove(directions[i])){
+                                if(nxtDir == Direction.CENTER || tarPos.distanceSquaredTo(curPos.add(directions[i])) 
+                                        < tarPos.distanceSquaredTo(curPos.add(nxtDir))){
+                                    nxtDir = directions[i];
+                                }
+                            }
+                        }
+                        if(rc.canMove(nxtDir)){
+                            rc.move(nxtDir);
+                        }
+                    }
+                } catch (GameActionException e) {
+                    System.out.println(rc.getType() + " Exception");
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    System.out.println(rc.getType() + " Exception");
+                    e.printStackTrace();
+                } finally {
+                    Clock.yield();
+                }
+            }
+        }
     }
 
     //move() - does one move of pathfinding
@@ -740,16 +589,20 @@ public strictfp class RobotPlayer {
                 } 
                 if(!hasMoved){
                     if(blockingRobot != null){ // if robot, wait or pathfind around
-                        if(rc.canMove(optimalDirection.rotateLeft())){
-                            rc.move(optimalDirection.rotateLeft());
-                            hasMoved = true;
+                        if(rng.nextBoolean()){
+                            if(rc.canMove(optimalDirection.rotateLeft())){
+                                rc.move(optimalDirection.rotateLeft());
+                                hasMoved = true;
+                            }  
                         } else if (rc.canMove(optimalDirection.rotateRight())){
                             rc.move(optimalDirection.rotateRight());
                             hasMoved = true;
-                        } else if(rc.getType() == RobotType.CARRIER){
-                            if(rc.canMove(optimalDirection.rotateLeft().rotateLeft())){
-                                rc.move(optimalDirection.rotateLeft().rotateLeft());
-                                hasMoved = true;
+                        } else {
+                            if(rng.nextBoolean()){
+                                if(rc.canMove(optimalDirection.rotateLeft().rotateLeft())){
+                                    rc.move(optimalDirection.rotateLeft().rotateLeft());
+                                    hasMoved = true;
+                                }
                             } else if (rc.canMove(optimalDirection.rotateRight().rotateRight())){
                                 rc.move(optimalDirection.rotateRight().rotateRight());
                                 hasMoved = true;
@@ -914,7 +767,7 @@ public strictfp class RobotPlayer {
             }
         }
     
-        void run(ResourceType tarResource) throws GameActionException{
+        void run(ResourceType tarResource, int lim) throws GameActionException{
             if(wells.length == 0) return;
             targetWellId = closestWell(tarResource); 
             target = wells[targetWellId];
@@ -926,7 +779,7 @@ public strictfp class RobotPlayer {
                     else rc.setIndicatorString(String.valueOf(target.x) + " " + String.valueOf(target.y));
                     if(comms.shouldSuicide()) rc.disintegrate();
                     for(int t = 0; t < 2; t++){
-                        if(rc.getWeight() >= 5){
+                        /*if(rc.getWeight() >= 5){
                             RobotInfo targets[] = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam().opponent());
                             RobotInfo lowestId = null;
                             for(int i = 0; i < targets.length; i++){
@@ -938,9 +791,9 @@ public strictfp class RobotPlayer {
                             if(lowestId != null && rc.canAttack(lowestId.getLocation())){
                                 rc.attack(lowestId.getLocation());
                             }
-                        }
+                        }*/
                         if(collecting){
-                            int dif = 39 - rc.getWeight();
+                            int dif = lim - rc.getWeight();
                             if(dif == 1){
                                 if(rc.canCollectResource(wells[targetWellId], 1)){
                                     rc.collectResource(wells[targetWellId], 1);
@@ -967,7 +820,7 @@ public strictfp class RobotPlayer {
                             if(foundWell){
                                 if(rc.getLocation().equals(target)){
                                     collecting = true;
-                                    break;
+                                    continue;
                                 }
                                 if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) 
                                         || !rc.senseMapInfo(target).isPassable())){                        
@@ -1077,8 +930,8 @@ public strictfp class RobotPlayer {
                                 comms.addWell(wells[i]);
                             }
                             ResourceCarrier carrier = new ResourceCarrier(rc);
-                            if(rng.nextBoolean()) carrier.run(ResourceType.ADAMANTIUM);
-                            else carrier.run(ResourceType.MANA);
+                            if(rng.nextBoolean()) carrier.run(ResourceType.ADAMANTIUM, 39);
+                            else carrier.run(ResourceType.MANA, 39);
                         }
                         move();
                     } else {
