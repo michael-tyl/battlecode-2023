@@ -1,4 +1,4 @@
-package cc_v1_2_2;
+package hqrewrite;
 
 
 import battlecode.common.*;
@@ -106,10 +106,12 @@ public strictfp class RobotPlayer {
         comms.setPos(myId, rc.getLocation());
 
         int totScouts = 4;
-        int numMiners = 16;
+        int numMiners = 20;
         int anchorCnt = 5;
+        int scoutCooldown = 100;
 
         Direction[] stkDir = new Direction[8];
+        MapLocation[] inRange = rc.getAllLocationsWithinRadiusSquared(rc.getLocation(), 9);
 
         // dance creds: michael
         stkDir[0] = hqLoc.directionTo(enemyHQ);
@@ -120,16 +122,17 @@ public strictfp class RobotPlayer {
         stkDir[5] = stkDir[0].rotateLeft().rotateLeft().rotateLeft();
         stkDir[6] = stkDir[0].rotateRight().rotateRight().rotateRight();
         stkDir[7] = stkDir[0].rotateLeft().rotateLeft().rotateLeft();
-        if(scouts > 0 && scoutCooldown == 0){
+        if(totScouts > 0 && scoutCooldown == 0){
             MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
             if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
                 comms.addJob(myId, 1);
                 rc.buildRobot(RobotType.CARRIER, newLoc);
-                scouts--;
+                totScouts--;
                 scoutCooldown = 100;
             }
         }
 
+        boolean buildJob2 = true;
         while(true){
             turnCount += 1;
             try {
@@ -149,27 +152,80 @@ public strictfp class RobotPlayer {
                         rc.writeSharedArray(63, curVal ^ flip);
                     }
 
-                    if(turnCount > 50 && !anchorBuilt) {
+                    if(turnCount > 50 && !anchorBuilt && rc.getNumAnchors(Anchor.ACCELERATING) + rc.getNumAnchors(Anchor.STANDARD) <= 1) {
                         // build anchor after sufficient resources
+                        if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
+                            rc.buildAnchor(Anchor.ACCELERATING);
+                            anchorBuilt = true;
+                        }
+                        else if(rc.canBuildAnchor(Anchor.STANDARD)) {
+                            rc.buildAnchor(Anchor.STANDARD);
+                            anchorBuilt = true;
+                        }
                     }
                     // prioritize miners and launchers in early game, no need for launchers yet
-                    bool buildMiner = (numMiners > 0);
+                    boolean buildMiner = (numMiners > 0);
                     MapLocation[] curWells = comms.getWells();
 
-                    while(rc.getActionCooldownTurns() < GameConstants.COOLDOWN_LIMIT)
-                    {
-                        if(buildMiner && numMiners > 0) {
-                            for(int i = 0; i < curWells.length; i++) {
-                                // find closest possible point to wells to take
+                    while(rc.getActionCooldownTurns() < GameConstants.COOLDOWN_LIMIT) {
+                        boolean doneOne = false;
+                        if (buildMiner && numMiners > 0) {
+                            MapLocation buildLoc = new MapLocation(-1, -1);
+                            int minDist = 3601;
+
+                            for (int i = 0; i < inRange.length; i++) {
+                                if (!rc.canBuildRobot(RobotType.CARRIER, inRange[i]))
+                                    continue;
+                                for (int j = 0; j < curWells.length; j++) {
+                                    // find closest possible point to wells to take
+                                    if (curWells[j].distanceSquaredTo(inRange[i]) < minDist) {
+                                        buildLoc = inRange[i];
+                                        minDist = curWells[j].distanceSquaredTo(inRange[i]);
+                                    }
+                                }
+                            }
+
+                            if (buildLoc.x != -1) {
+                                rc.setIndicatorString("Building carrier right now");
+                                if(buildJob2 == true)
+                                    comms.addJob(myId, 2);
+                                else comms.addJob(myId, 3);
+                                buildJob2 = !buildJob2;
+                                rc.buildRobot(RobotType.CARRIER, buildLoc);
+                                doneOne = true;
                             }
                         } else {
                             // spawn launchers close to enemy launchers / enemy HQ
                             // doesn't have to be adjacent
                             // or spawn them close to other launchers to move in groups
+
+                            MapLocation buildLoc = new MapLocation(-1, -1);
+                            int minDist = 3601;
+
+                            // stolen code :da:
+                            for (int mult = 1; mult <= 3; mult++) {
+                                for (int i = 0; i < stkDir.length; i++) {
+                                    MapLocation newLoc = rc.getLocation();
+                                    for (int j = 0; j < mult; j++) {
+                                        newLoc = newLoc.add(stkDir[i]);
+                                    }
+                                    if (numFriendlies < 42 && turnCount < 1750 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
+                                        rc.setIndicatorString("Trying to build a launcher");
+                                        rc.buildRobot(RobotType.LAUNCHER, newLoc);
+                                    }
+                                }
+
+                            }
                         }
+                        if(!doneOne) break;
                         buildMiner = !buildMiner;
                     }
+                } else {
+                    int curVal = rc.readSharedArray(63);
+                    rc.writeSharedArray(63, curVal | (1 << (rc.getID() / 2 - 1)));
+                    rc.setIndicatorString("Disabled " + enemyCount);
                 }
+
             } catch (GameActionException e) {
                 System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();

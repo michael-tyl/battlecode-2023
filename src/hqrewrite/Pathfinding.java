@@ -1,4 +1,4 @@
-package cc_v1_2_2;
+package hqrewrite;
 
 import battlecode.common.*;
 
