@@ -152,7 +152,7 @@ public strictfp class RobotPlayer {
                         rc.writeSharedArray(63, curVal ^ flip);
                     }
 
-                    if(turnCount > 50 && !anchorBuilt && rc.getNumAnchors(Anchor.ACCELERATING) + rc.getNumAnchors(Anchor.STANDARD) <= 1) {
+                    if(!anchorBuilt && rc.getNumAnchors(Anchor.ACCELERATING) + rc.getNumAnchors(Anchor.STANDARD) <= 1) {
                         // build anchor after sufficient resources
                         if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
                             rc.buildAnchor(Anchor.ACCELERATING);
