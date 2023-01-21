@@ -104,7 +104,7 @@ public strictfp class RobotPlayer {
                         continue;
 
                     if (pause) {
-                        target = new MapLocation(rng.nextInt(rc.getMapWidth()), rng.nextInt(rc.getMapHeight()));            
+                        target = new MapLocation(rng.nextInt(rc.getMapWidth()), rng.nextInt(rc.getMapHeight()));
                         pause = false;
                     } else if (rc.getLocation().isAdjacentTo(target)) {
                         rc.setIndicatorString("reached target locaton at " + target.toString());
