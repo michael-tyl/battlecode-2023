@@ -105,7 +105,7 @@ public strictfp class RobotPlayer {
         }
         comms.setPos(myId, rc.getLocation());
 
-        int totScouts = 4;
+        int totScouts = 5;
         int numMiners = 20;
         int anchorCnt = 5;
         int scoutCooldown = 100;
@@ -135,6 +135,7 @@ public strictfp class RobotPlayer {
         boolean buildJob2 = true;
         while(true){
             turnCount += 1;
+
             try {
                 boolean built = false;
 
@@ -145,6 +146,8 @@ public strictfp class RobotPlayer {
                 // Only spawn if not surrounded
                 int enemyCount = countEnemyLaunchers(rc);
 
+                --scoutCooldown;
+
                 if(enemyCount <= numFriendlies + 4) {
                     int curVal = rc.readSharedArray(63);
                     int flip = 1 << (rc.getID() / 2 - 1);
@@ -152,7 +155,7 @@ public strictfp class RobotPlayer {
                         rc.writeSharedArray(63, curVal ^ flip);
                     }
 
-                    if(!anchorBuilt && rc.getNumAnchors(Anchor.ACCELERATING) + rc.getNumAnchors(Anchor.STANDARD) <= 1) {
+                    if(turnCount > 50 && !anchorBuilt && rc.getNumAnchors(Anchor.ACCELERATING) + rc.getNumAnchors(Anchor.STANDARD) <= 1) {
                         // build anchor after sufficient resources
                         if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
                             rc.buildAnchor(Anchor.ACCELERATING);
@@ -173,26 +176,41 @@ public strictfp class RobotPlayer {
                             MapLocation buildLoc = new MapLocation(-1, -1);
                             int minDist = 3601;
 
-                            for (int i = 0; i < inRange.length; i++) {
-                                if (!rc.canBuildRobot(RobotType.CARRIER, inRange[i]))
-                                    continue;
-                                for (int j = 0; j < curWells.length; j++) {
-                                    // find closest possible point to wells to take
-                                    if (curWells[j].distanceSquaredTo(inRange[i]) < minDist) {
-                                        buildLoc = inRange[i];
-                                        minDist = curWells[j].distanceSquaredTo(inRange[i]);
-                                    }
+                            if(totScouts > 0 && scoutCooldown == 0)
+                            {
+                                // dance creds: Michael
+                                MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                                if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                                    comms.addJob(myId, 1);
+                                    rc.buildRobot(RobotType.CARRIER, newLoc);
+                                    totScouts--;
+                                    scoutCooldown = 100;
                                 }
                             }
+                            else {
+                                for (int i = 0; i < inRange.length; i++) {
+                                    if (!rc.canBuildRobot(RobotType.CARRIER, inRange[i]))
+                                        continue;
+                                    if(buildLoc.x == -1)
+                                        buildLoc = inRange[i];
+                                    for (int j = 0; j < curWells.length; j++) {
+                                        // find closest possible point to wells to take
+                                        if (curWells[j].distanceSquaredTo(inRange[i]) < minDist) {
+                                            buildLoc = inRange[i];
+                                            minDist = curWells[j].distanceSquaredTo(inRange[i]);
+                                        }
+                                    }
+                                }
 
-                            if (buildLoc.x != -1) {
-                                rc.setIndicatorString("Building carrier right now");
-                                if(buildJob2 == true)
-                                    comms.addJob(myId, 2);
-                                else comms.addJob(myId, 3);
-                                buildJob2 = !buildJob2;
-                                rc.buildRobot(RobotType.CARRIER, buildLoc);
-                                doneOne = true;
+                                if (buildLoc.x != -1) {
+                                    rc.setIndicatorString("Building carrier right now");
+                                    if(buildJob2 == true)
+                                        comms.addJob(myId, 2);
+                                    else comms.addJob(myId, 3);
+                                    buildJob2 = !buildJob2;
+                                    rc.buildRobot(RobotType.CARRIER, buildLoc);
+                                    doneOne = true;
+                                }
                             }
                         } else {
                             // spawn launchers close to enemy launchers / enemy HQ
@@ -211,9 +229,12 @@ public strictfp class RobotPlayer {
                                     }
                                     if (numFriendlies < 42 && turnCount < 1750 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
                                         rc.setIndicatorString("Trying to build a launcher");
+                                        doneOne = true;
                                         rc.buildRobot(RobotType.LAUNCHER, newLoc);
+                                        break;
                                     }
                                 }
+                                if(doneOne == true) break;
 
                             }
                         }
