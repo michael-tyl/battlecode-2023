@@ -81,10 +81,12 @@ with open(f'UnrolledBFS_MR{moveSqRadius}_VR{visionSqRadius}.java', 'w+') as java
 				bfsVisited[nx][ny] = True
 				bfsQueue.put((nx, ny))
 				print(f'\t\tmaploc{cellID[nx][ny]} = maploc{cellID[curX][curY]}.add(Direction.{directionsList[d]});', file = javaFile)
+				print(f'if (rc.onTheMap(maploc{cellID[curX][curY]})) {{', file = javaFile)
 				print(f'\t\tmapinfo{cellID[nx][ny]} = rc.senseMapInfo(maploc{cellID[nx][ny]});\n', file = javaFile)
 				print(f'\t\taccessibilityFactor{cellID[nx][ny]} = 256;', file = javaFile)
 				print(f'\t\tpotentialFactor{cellID[nx][ny]} = 256;', file = javaFile)
 				print(f'\t\tinitialDirection{cellID[nx][ny]} = null;', file = javaFile)
+				print('}', file = javaFile)
 
 	moveCellsSortedByDistance = sorted(moveCells, key = lambda k: squareDis(k[0], k[1], originX, originY))
 	alreadyProcessed = [[False for i in range(visionDim)] for j in range(visionDim)]
@@ -111,7 +113,7 @@ with open(f'UnrolledBFS_MR{moveSqRadius}_VR{visionSqRadius}.java', 'w+') as java
 					hasNeighbors = True
 					break
 			if hasNeighbors:
-				print(f'\t\tif (mapinfo{cellID[x][y]}.isPassable() && rc.senseRobotAtLocation(maploc{cellID[x][y]}) == null) {{', file = javaFile)
+				print(f'\t\tif (rc.onTheMap(maploc{cellID[x][y]}) && mapinfo{cellID[x][y]}.isPassable() && rc.senseRobotAtLocation(maploc{cellID[x][y]}) == null) {{', file = javaFile)
 				for d in range(numAdjacent):
 					dx, dy = adjacentCells[d]
 					nx, ny = x + dx, y + dy
@@ -132,8 +134,8 @@ with open(f'UnrolledBFS_MR{moveSqRadius}_VR{visionSqRadius}.java', 'w+') as java
 		print(f'\t\t\tswitch (dy) {{', file = javaFile)
 		for k in moveCells:
 			curX, curY = k
-			if curX == x + originX:
-				print(f'\t\t\tcase {curY - originY}: return initialDirection{cellID[curX][curY]};', file = javaFile)
+			if curY - originY == x:
+				print(f'\t\t\tcase {originX - curX}: if (rc.onTheMap(maploc{cellID[curX][curY]})) return initialDirection{cellID[curX][curY]};', file = javaFile)
 		print('\t\t\t}', file = javaFile)
 		print('\t\t\tbreak;', file = javaFile)
 	print('\t\t}', file = javaFile)
@@ -165,7 +167,7 @@ with open(f'UnrolledBFS_MR{moveSqRadius}_VR{visionSqRadius}.java', 'w+') as java
 				hasNeighbors = True
 				break
 		if hasNeighbors:
-			print(f'\t\tif (mapinfo{cellID[x][y]}.isPassable() && rc.senseRobotAtLocation(maploc{cellID[x][y]}) == null) {{', file = javaFile)
+			print(f'\t\tif (rc.onTheMap(maploc{cellID[x][y]}) && mapinfo{cellID[x][y]}.isPassable() && rc.senseRobotAtLocation(maploc{cellID[x][y]}) == null) {{', file = javaFile)
 			for d in range(numAdjacent):
 				dx, dy = adjacentCells[d]
 				nx, ny = x + dx, y + dy
@@ -175,18 +177,24 @@ with open(f'UnrolledBFS_MR{moveSqRadius}_VR{visionSqRadius}.java', 'w+') as java
 
 	print('\t\tint bestValue = 256;', file = javaFile)
 	print('\t\tDirection bestDirection = null;', file = javaFile)
+	if enableDebug:
+		print('\t\tMapLocation bestLocation = null;', file = javaFile)
 	for k in moveCells:
 		x, y = k
-		print(f'\t\tif (accessibilityFactor{cellID[x][y]} + potentialFactor{cellID[x][y]} < bestValue) {{', file = javaFile)
+		print(f'\t\tif (rc.onTheMap(maploc{cellID[x][y]}) && mapinfo{cellID[x][y]}.isPassable() && rc.senseRobotAtLocation(maploc{cellID[x][y]}) == null && accessibilityFactor{cellID[x][y]} + potentialFactor{cellID[x][y]} < bestValue) {{', file = javaFile)
 		print(f'\t\t\tbestValue = accessibilityFactor{cellID[x][y]} + potentialFactor{cellID[x][y]};', file = javaFile)
 		print(f'\t\t\tbestDirection = initialDirection{cellID[x][y]};', file = javaFile)
+		if enableDebug:
+			print(f'\t\t\tbestLocation = maploc{cellID[x][y]};', file = javaFile)
 		print('\t\t}', file = javaFile)
 
 	if enableDebug:
-		for k in moveCells:
-			x, y = k
-			print(f'System.out.println("{cellID[x][y]}: accessibilityFactor = " + accessibilityFactor{cellID[x][y]} + "potentialFactor = " + potentialFactor{cellID[x][y]});', file = javaFile)
+		# for k in moveCells:
+		# 	x, y = k
+		# 	print(f'System.out.println("{cellID[x][y]}: accessibilityFactor = " + accessibilityFactor{cellID[x][y]} + "potentialFactor = " + potentialFactor{cellID[x][y]});', file = javaFile)
 		print('\t\tSystem.out.println("bestValue = " + bestValue + ", bestDirection = " + (bestDirection == null ? "null" : bestDirection.name()));', file = javaFile)
+		print('\t\tSystem.out.println("dx = " + dx + ", dy = " + dy);', file = javaFile)
+		print('\t\tSystem.out.println("** bestLocation ** = " + bestLocation.toString());', file = javaFile)
 
 
 	print('\t\treturn bestDirection;', file = javaFile)
