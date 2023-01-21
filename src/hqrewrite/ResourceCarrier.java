@@ -165,14 +165,9 @@ public class ResourceCarrier extends Pathfinding {
                     }
                     if(collecting){
                         int dif = 39 - rc.getWeight();
-                        if(dif == 1){
+                        if(dif > 0){
                             if(rc.canCollectResource(wells[targetWellId], 1)){
                                 rc.collectResource(wells[targetWellId], 1);
-                            }
-                            continue;
-                        } else if(dif > 1){
-                            if(rc.canCollectResource(wells[targetWellId], 2)){
-                                rc.collectResource(wells[targetWellId], 2);
                             }
                             continue;
                         } else {
@@ -222,7 +217,6 @@ public class ResourceCarrier extends Pathfinding {
                                 }
                                 foundHome = false;
                                 goingHome = false;
-                                targetWellId = closestWell(tarResource);
                                 target = wells[targetWellId];
                             }
                             if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) 
