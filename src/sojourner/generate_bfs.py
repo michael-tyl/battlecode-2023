@@ -81,7 +81,7 @@ with open(f'UnrolledBFS_MR{moveSqRadius}_VR{visionSqRadius}.java', 'w+') as java
 				bfsVisited[nx][ny] = True
 				bfsQueue.put((nx, ny))
 				print(f'\t\tmaploc{cellID[nx][ny]} = maploc{cellID[curX][curY]}.add(Direction.{directionsList[d]});', file = javaFile)
-				print(f'if (rc.onTheMap(maploc{cellID[curX][curY]})) {{', file = javaFile)
+				print(f'if (rc.onTheMap(maploc{cellID[nx][ny]})) {{', file = javaFile)
 				print(f'\t\tmapinfo{cellID[nx][ny]} = rc.senseMapInfo(maploc{cellID[nx][ny]});\n', file = javaFile)
 				print(f'\t\taccessibilityFactor{cellID[nx][ny]} = 256;', file = javaFile)
 				print(f'\t\tpotentialFactor{cellID[nx][ny]} = 256;', file = javaFile)

@@ -432,7 +432,7 @@ public class UnrolledBFS_MR20_VR20 {
 		initialDirection1034 = null;
 
 		maploc1024 = maploc1034.add(Direction.NORTHWEST);
-if (rc.onTheMap(maploc1034)) {
+if (rc.onTheMap(maploc1024)) {
 		mapinfo1024 = rc.senseMapInfo(maploc1024);
 
 		accessibilityFactor1024 = 256;
@@ -440,7 +440,7 @@ if (rc.onTheMap(maploc1034)) {
 		initialDirection1024 = null;
 }
 		maploc1025 = maploc1034.add(Direction.NORTH);
-if (rc.onTheMap(maploc1034)) {
+if (rc.onTheMap(maploc1025)) {
 		mapinfo1025 = rc.senseMapInfo(maploc1025);
 
 		accessibilityFactor1025 = 256;
@@ -448,7 +448,7 @@ if (rc.onTheMap(maploc1034)) {
 		initialDirection1025 = null;
 }
 		maploc1026 = maploc1034.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1034)) {
+if (rc.onTheMap(maploc1026)) {
 		mapinfo1026 = rc.senseMapInfo(maploc1026);
 
 		accessibilityFactor1026 = 256;
@@ -456,7 +456,7 @@ if (rc.onTheMap(maploc1034)) {
 		initialDirection1026 = null;
 }
 		maploc1033 = maploc1034.add(Direction.WEST);
-if (rc.onTheMap(maploc1034)) {
+if (rc.onTheMap(maploc1033)) {
 		mapinfo1033 = rc.senseMapInfo(maploc1033);
 
 		accessibilityFactor1033 = 256;
@@ -464,7 +464,7 @@ if (rc.onTheMap(maploc1034)) {
 		initialDirection1033 = null;
 }
 		maploc1035 = maploc1034.add(Direction.EAST);
-if (rc.onTheMap(maploc1034)) {
+if (rc.onTheMap(maploc1035)) {
 		mapinfo1035 = rc.senseMapInfo(maploc1035);
 
 		accessibilityFactor1035 = 256;
@@ -472,7 +472,7 @@ if (rc.onTheMap(maploc1034)) {
 		initialDirection1035 = null;
 }
 		maploc1042 = maploc1034.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1034)) {
+if (rc.onTheMap(maploc1042)) {
 		mapinfo1042 = rc.senseMapInfo(maploc1042);
 
 		accessibilityFactor1042 = 256;
@@ -480,7 +480,7 @@ if (rc.onTheMap(maploc1034)) {
 		initialDirection1042 = null;
 }
 		maploc1043 = maploc1034.add(Direction.SOUTH);
-if (rc.onTheMap(maploc1034)) {
+if (rc.onTheMap(maploc1043)) {
 		mapinfo1043 = rc.senseMapInfo(maploc1043);
 
 		accessibilityFactor1043 = 256;
@@ -488,7 +488,7 @@ if (rc.onTheMap(maploc1034)) {
 		initialDirection1043 = null;
 }
 		maploc1044 = maploc1034.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1034)) {
+if (rc.onTheMap(maploc1044)) {
 		mapinfo1044 = rc.senseMapInfo(maploc1044);
 
 		accessibilityFactor1044 = 256;
@@ -496,7 +496,7 @@ if (rc.onTheMap(maploc1034)) {
 		initialDirection1044 = null;
 }
 		maploc1014 = maploc1024.add(Direction.NORTHWEST);
-if (rc.onTheMap(maploc1024)) {
+if (rc.onTheMap(maploc1014)) {
 		mapinfo1014 = rc.senseMapInfo(maploc1014);
 
 		accessibilityFactor1014 = 256;
@@ -504,7 +504,7 @@ if (rc.onTheMap(maploc1024)) {
 		initialDirection1014 = null;
 }
 		maploc1015 = maploc1024.add(Direction.NORTH);
-if (rc.onTheMap(maploc1024)) {
+if (rc.onTheMap(maploc1015)) {
 		mapinfo1015 = rc.senseMapInfo(maploc1015);
 
 		accessibilityFactor1015 = 256;
@@ -512,7 +512,7 @@ if (rc.onTheMap(maploc1024)) {
 		initialDirection1015 = null;
 }
 		maploc1016 = maploc1024.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1024)) {
+if (rc.onTheMap(maploc1016)) {
 		mapinfo1016 = rc.senseMapInfo(maploc1016);
 
 		accessibilityFactor1016 = 256;
@@ -520,7 +520,7 @@ if (rc.onTheMap(maploc1024)) {
 		initialDirection1016 = null;
 }
 		maploc1023 = maploc1024.add(Direction.WEST);
-if (rc.onTheMap(maploc1024)) {
+if (rc.onTheMap(maploc1023)) {
 		mapinfo1023 = rc.senseMapInfo(maploc1023);
 
 		accessibilityFactor1023 = 256;
@@ -528,7 +528,7 @@ if (rc.onTheMap(maploc1024)) {
 		initialDirection1023 = null;
 }
 		maploc1032 = maploc1024.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1024)) {
+if (rc.onTheMap(maploc1032)) {
 		mapinfo1032 = rc.senseMapInfo(maploc1032);
 
 		accessibilityFactor1032 = 256;
@@ -536,7 +536,7 @@ if (rc.onTheMap(maploc1024)) {
 		initialDirection1032 = null;
 }
 		maploc1017 = maploc1025.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1025)) {
+if (rc.onTheMap(maploc1017)) {
 		mapinfo1017 = rc.senseMapInfo(maploc1017);
 
 		accessibilityFactor1017 = 256;
@@ -544,7 +544,7 @@ if (rc.onTheMap(maploc1025)) {
 		initialDirection1017 = null;
 }
 		maploc1018 = maploc1026.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1026)) {
+if (rc.onTheMap(maploc1018)) {
 		mapinfo1018 = rc.senseMapInfo(maploc1018);
 
 		accessibilityFactor1018 = 256;
@@ -552,7 +552,7 @@ if (rc.onTheMap(maploc1026)) {
 		initialDirection1018 = null;
 }
 		maploc1027 = maploc1026.add(Direction.EAST);
-if (rc.onTheMap(maploc1026)) {
+if (rc.onTheMap(maploc1027)) {
 		mapinfo1027 = rc.senseMapInfo(maploc1027);
 
 		accessibilityFactor1027 = 256;
@@ -560,7 +560,7 @@ if (rc.onTheMap(maploc1026)) {
 		initialDirection1027 = null;
 }
 		maploc1036 = maploc1026.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1026)) {
+if (rc.onTheMap(maploc1036)) {
 		mapinfo1036 = rc.senseMapInfo(maploc1036);
 
 		accessibilityFactor1036 = 256;
@@ -568,7 +568,7 @@ if (rc.onTheMap(maploc1026)) {
 		initialDirection1036 = null;
 }
 		maploc1041 = maploc1033.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1033)) {
+if (rc.onTheMap(maploc1041)) {
 		mapinfo1041 = rc.senseMapInfo(maploc1041);
 
 		accessibilityFactor1041 = 256;
@@ -576,7 +576,7 @@ if (rc.onTheMap(maploc1033)) {
 		initialDirection1041 = null;
 }
 		maploc1045 = maploc1035.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1035)) {
+if (rc.onTheMap(maploc1045)) {
 		mapinfo1045 = rc.senseMapInfo(maploc1045);
 
 		accessibilityFactor1045 = 256;
@@ -584,7 +584,7 @@ if (rc.onTheMap(maploc1035)) {
 		initialDirection1045 = null;
 }
 		maploc1050 = maploc1042.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1042)) {
+if (rc.onTheMap(maploc1050)) {
 		mapinfo1050 = rc.senseMapInfo(maploc1050);
 
 		accessibilityFactor1050 = 256;
@@ -592,7 +592,7 @@ if (rc.onTheMap(maploc1042)) {
 		initialDirection1050 = null;
 }
 		maploc1051 = maploc1042.add(Direction.SOUTH);
-if (rc.onTheMap(maploc1042)) {
+if (rc.onTheMap(maploc1051)) {
 		mapinfo1051 = rc.senseMapInfo(maploc1051);
 
 		accessibilityFactor1051 = 256;
@@ -600,7 +600,7 @@ if (rc.onTheMap(maploc1042)) {
 		initialDirection1051 = null;
 }
 		maploc1052 = maploc1042.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1042)) {
+if (rc.onTheMap(maploc1052)) {
 		mapinfo1052 = rc.senseMapInfo(maploc1052);
 
 		accessibilityFactor1052 = 256;
@@ -608,7 +608,7 @@ if (rc.onTheMap(maploc1042)) {
 		initialDirection1052 = null;
 }
 		maploc1053 = maploc1043.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1043)) {
+if (rc.onTheMap(maploc1053)) {
 		mapinfo1053 = rc.senseMapInfo(maploc1053);
 
 		accessibilityFactor1053 = 256;
@@ -616,7 +616,7 @@ if (rc.onTheMap(maploc1043)) {
 		initialDirection1053 = null;
 }
 		maploc1054 = maploc1044.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1044)) {
+if (rc.onTheMap(maploc1054)) {
 		mapinfo1054 = rc.senseMapInfo(maploc1054);
 
 		accessibilityFactor1054 = 256;
@@ -624,7 +624,7 @@ if (rc.onTheMap(maploc1044)) {
 		initialDirection1054 = null;
 }
 		maploc1005 = maploc1014.add(Direction.NORTHWEST);
-if (rc.onTheMap(maploc1014)) {
+if (rc.onTheMap(maploc1005)) {
 		mapinfo1005 = rc.senseMapInfo(maploc1005);
 
 		accessibilityFactor1005 = 256;
@@ -632,7 +632,7 @@ if (rc.onTheMap(maploc1014)) {
 		initialDirection1005 = null;
 }
 		maploc1006 = maploc1014.add(Direction.NORTH);
-if (rc.onTheMap(maploc1014)) {
+if (rc.onTheMap(maploc1006)) {
 		mapinfo1006 = rc.senseMapInfo(maploc1006);
 
 		accessibilityFactor1006 = 256;
@@ -640,7 +640,7 @@ if (rc.onTheMap(maploc1014)) {
 		initialDirection1006 = null;
 }
 		maploc1007 = maploc1014.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1014)) {
+if (rc.onTheMap(maploc1007)) {
 		mapinfo1007 = rc.senseMapInfo(maploc1007);
 
 		accessibilityFactor1007 = 256;
@@ -648,7 +648,7 @@ if (rc.onTheMap(maploc1014)) {
 		initialDirection1007 = null;
 }
 		maploc1013 = maploc1014.add(Direction.WEST);
-if (rc.onTheMap(maploc1014)) {
+if (rc.onTheMap(maploc1013)) {
 		mapinfo1013 = rc.senseMapInfo(maploc1013);
 
 		accessibilityFactor1013 = 256;
@@ -656,7 +656,7 @@ if (rc.onTheMap(maploc1014)) {
 		initialDirection1013 = null;
 }
 		maploc1022 = maploc1014.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1014)) {
+if (rc.onTheMap(maploc1022)) {
 		mapinfo1022 = rc.senseMapInfo(maploc1022);
 
 		accessibilityFactor1022 = 256;
@@ -664,7 +664,7 @@ if (rc.onTheMap(maploc1014)) {
 		initialDirection1022 = null;
 }
 		maploc1008 = maploc1015.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1015)) {
+if (rc.onTheMap(maploc1008)) {
 		mapinfo1008 = rc.senseMapInfo(maploc1008);
 
 		accessibilityFactor1008 = 256;
@@ -672,7 +672,7 @@ if (rc.onTheMap(maploc1015)) {
 		initialDirection1008 = null;
 }
 		maploc1009 = maploc1016.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1016)) {
+if (rc.onTheMap(maploc1009)) {
 		mapinfo1009 = rc.senseMapInfo(maploc1009);
 
 		accessibilityFactor1009 = 256;
@@ -680,7 +680,7 @@ if (rc.onTheMap(maploc1016)) {
 		initialDirection1009 = null;
 }
 		maploc1031 = maploc1023.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1023)) {
+if (rc.onTheMap(maploc1031)) {
 		mapinfo1031 = rc.senseMapInfo(maploc1031);
 
 		accessibilityFactor1031 = 256;
@@ -688,7 +688,7 @@ if (rc.onTheMap(maploc1023)) {
 		initialDirection1031 = null;
 }
 		maploc1040 = maploc1032.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1032)) {
+if (rc.onTheMap(maploc1040)) {
 		mapinfo1040 = rc.senseMapInfo(maploc1040);
 
 		accessibilityFactor1040 = 256;
@@ -696,7 +696,7 @@ if (rc.onTheMap(maploc1032)) {
 		initialDirection1040 = null;
 }
 		maploc1010 = maploc1017.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1017)) {
+if (rc.onTheMap(maploc1010)) {
 		mapinfo1010 = rc.senseMapInfo(maploc1010);
 
 		accessibilityFactor1010 = 256;
@@ -704,7 +704,7 @@ if (rc.onTheMap(maploc1017)) {
 		initialDirection1010 = null;
 }
 		maploc1011 = maploc1018.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1018)) {
+if (rc.onTheMap(maploc1011)) {
 		mapinfo1011 = rc.senseMapInfo(maploc1011);
 
 		accessibilityFactor1011 = 256;
@@ -712,7 +712,7 @@ if (rc.onTheMap(maploc1018)) {
 		initialDirection1011 = null;
 }
 		maploc1019 = maploc1018.add(Direction.EAST);
-if (rc.onTheMap(maploc1018)) {
+if (rc.onTheMap(maploc1019)) {
 		mapinfo1019 = rc.senseMapInfo(maploc1019);
 
 		accessibilityFactor1019 = 256;
@@ -720,7 +720,7 @@ if (rc.onTheMap(maploc1018)) {
 		initialDirection1019 = null;
 }
 		maploc1028 = maploc1018.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1018)) {
+if (rc.onTheMap(maploc1028)) {
 		mapinfo1028 = rc.senseMapInfo(maploc1028);
 
 		accessibilityFactor1028 = 256;
@@ -728,7 +728,7 @@ if (rc.onTheMap(maploc1018)) {
 		initialDirection1028 = null;
 }
 		maploc1037 = maploc1027.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1027)) {
+if (rc.onTheMap(maploc1037)) {
 		mapinfo1037 = rc.senseMapInfo(maploc1037);
 
 		accessibilityFactor1037 = 256;
@@ -736,7 +736,7 @@ if (rc.onTheMap(maploc1027)) {
 		initialDirection1037 = null;
 }
 		maploc1046 = maploc1036.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1036)) {
+if (rc.onTheMap(maploc1046)) {
 		mapinfo1046 = rc.senseMapInfo(maploc1046);
 
 		accessibilityFactor1046 = 256;
@@ -744,7 +744,7 @@ if (rc.onTheMap(maploc1036)) {
 		initialDirection1046 = null;
 }
 		maploc1049 = maploc1041.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1041)) {
+if (rc.onTheMap(maploc1049)) {
 		mapinfo1049 = rc.senseMapInfo(maploc1049);
 
 		accessibilityFactor1049 = 256;
@@ -752,7 +752,7 @@ if (rc.onTheMap(maploc1041)) {
 		initialDirection1049 = null;
 }
 		maploc1055 = maploc1045.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1045)) {
+if (rc.onTheMap(maploc1055)) {
 		mapinfo1055 = rc.senseMapInfo(maploc1055);
 
 		accessibilityFactor1055 = 256;
@@ -760,7 +760,7 @@ if (rc.onTheMap(maploc1045)) {
 		initialDirection1055 = null;
 }
 		maploc1057 = maploc1050.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1050)) {
+if (rc.onTheMap(maploc1057)) {
 		mapinfo1057 = rc.senseMapInfo(maploc1057);
 
 		accessibilityFactor1057 = 256;
@@ -768,7 +768,7 @@ if (rc.onTheMap(maploc1050)) {
 		initialDirection1057 = null;
 }
 		maploc1058 = maploc1050.add(Direction.SOUTH);
-if (rc.onTheMap(maploc1050)) {
+if (rc.onTheMap(maploc1058)) {
 		mapinfo1058 = rc.senseMapInfo(maploc1058);
 
 		accessibilityFactor1058 = 256;
@@ -776,7 +776,7 @@ if (rc.onTheMap(maploc1050)) {
 		initialDirection1058 = null;
 }
 		maploc1059 = maploc1050.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1050)) {
+if (rc.onTheMap(maploc1059)) {
 		mapinfo1059 = rc.senseMapInfo(maploc1059);
 
 		accessibilityFactor1059 = 256;
@@ -784,7 +784,7 @@ if (rc.onTheMap(maploc1050)) {
 		initialDirection1059 = null;
 }
 		maploc1060 = maploc1051.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1051)) {
+if (rc.onTheMap(maploc1060)) {
 		mapinfo1060 = rc.senseMapInfo(maploc1060);
 
 		accessibilityFactor1060 = 256;
@@ -792,7 +792,7 @@ if (rc.onTheMap(maploc1051)) {
 		initialDirection1060 = null;
 }
 		maploc1061 = maploc1052.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1052)) {
+if (rc.onTheMap(maploc1061)) {
 		mapinfo1061 = rc.senseMapInfo(maploc1061);
 
 		accessibilityFactor1061 = 256;
@@ -800,7 +800,7 @@ if (rc.onTheMap(maploc1052)) {
 		initialDirection1061 = null;
 }
 		maploc1062 = maploc1053.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1053)) {
+if (rc.onTheMap(maploc1062)) {
 		mapinfo1062 = rc.senseMapInfo(maploc1062);
 
 		accessibilityFactor1062 = 256;
@@ -808,7 +808,7 @@ if (rc.onTheMap(maploc1053)) {
 		initialDirection1062 = null;
 }
 		maploc1063 = maploc1054.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1054)) {
+if (rc.onTheMap(maploc1063)) {
 		mapinfo1063 = rc.senseMapInfo(maploc1063);
 
 		accessibilityFactor1063 = 256;
@@ -816,7 +816,7 @@ if (rc.onTheMap(maploc1054)) {
 		initialDirection1063 = null;
 }
 		maploc1000 = maploc1005.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1005)) {
+if (rc.onTheMap(maploc1000)) {
 		mapinfo1000 = rc.senseMapInfo(maploc1000);
 
 		accessibilityFactor1000 = 256;
@@ -824,7 +824,7 @@ if (rc.onTheMap(maploc1005)) {
 		initialDirection1000 = null;
 }
 		maploc1012 = maploc1005.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1005)) {
+if (rc.onTheMap(maploc1012)) {
 		mapinfo1012 = rc.senseMapInfo(maploc1012);
 
 		accessibilityFactor1012 = 256;
@@ -832,7 +832,7 @@ if (rc.onTheMap(maploc1005)) {
 		initialDirection1012 = null;
 }
 		maploc1001 = maploc1006.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1006)) {
+if (rc.onTheMap(maploc1001)) {
 		mapinfo1001 = rc.senseMapInfo(maploc1001);
 
 		accessibilityFactor1001 = 256;
@@ -840,7 +840,7 @@ if (rc.onTheMap(maploc1006)) {
 		initialDirection1001 = null;
 }
 		maploc1002 = maploc1007.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1007)) {
+if (rc.onTheMap(maploc1002)) {
 		mapinfo1002 = rc.senseMapInfo(maploc1002);
 
 		accessibilityFactor1002 = 256;
@@ -848,7 +848,7 @@ if (rc.onTheMap(maploc1007)) {
 		initialDirection1002 = null;
 }
 		maploc1021 = maploc1013.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1013)) {
+if (rc.onTheMap(maploc1021)) {
 		mapinfo1021 = rc.senseMapInfo(maploc1021);
 
 		accessibilityFactor1021 = 256;
@@ -856,7 +856,7 @@ if (rc.onTheMap(maploc1013)) {
 		initialDirection1021 = null;
 }
 		maploc1030 = maploc1022.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1022)) {
+if (rc.onTheMap(maploc1030)) {
 		mapinfo1030 = rc.senseMapInfo(maploc1030);
 
 		accessibilityFactor1030 = 256;
@@ -864,7 +864,7 @@ if (rc.onTheMap(maploc1022)) {
 		initialDirection1030 = null;
 }
 		maploc1003 = maploc1008.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1008)) {
+if (rc.onTheMap(maploc1003)) {
 		mapinfo1003 = rc.senseMapInfo(maploc1003);
 
 		accessibilityFactor1003 = 256;
@@ -872,7 +872,7 @@ if (rc.onTheMap(maploc1008)) {
 		initialDirection1003 = null;
 }
 		maploc1004 = maploc1009.add(Direction.NORTHEAST);
-if (rc.onTheMap(maploc1009)) {
+if (rc.onTheMap(maploc1004)) {
 		mapinfo1004 = rc.senseMapInfo(maploc1004);
 
 		accessibilityFactor1004 = 256;
@@ -880,7 +880,7 @@ if (rc.onTheMap(maploc1009)) {
 		initialDirection1004 = null;
 }
 		maploc1039 = maploc1031.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1031)) {
+if (rc.onTheMap(maploc1039)) {
 		mapinfo1039 = rc.senseMapInfo(maploc1039);
 
 		accessibilityFactor1039 = 256;
@@ -888,7 +888,7 @@ if (rc.onTheMap(maploc1031)) {
 		initialDirection1039 = null;
 }
 		maploc1048 = maploc1040.add(Direction.SOUTHWEST);
-if (rc.onTheMap(maploc1040)) {
+if (rc.onTheMap(maploc1048)) {
 		mapinfo1048 = rc.senseMapInfo(maploc1048);
 
 		accessibilityFactor1048 = 256;
@@ -896,7 +896,7 @@ if (rc.onTheMap(maploc1040)) {
 		initialDirection1048 = null;
 }
 		maploc1020 = maploc1011.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1011)) {
+if (rc.onTheMap(maploc1020)) {
 		mapinfo1020 = rc.senseMapInfo(maploc1020);
 
 		accessibilityFactor1020 = 256;
@@ -904,7 +904,7 @@ if (rc.onTheMap(maploc1011)) {
 		initialDirection1020 = null;
 }
 		maploc1029 = maploc1019.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1019)) {
+if (rc.onTheMap(maploc1029)) {
 		mapinfo1029 = rc.senseMapInfo(maploc1029);
 
 		accessibilityFactor1029 = 256;
@@ -912,7 +912,7 @@ if (rc.onTheMap(maploc1019)) {
 		initialDirection1029 = null;
 }
 		maploc1038 = maploc1028.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1028)) {
+if (rc.onTheMap(maploc1038)) {
 		mapinfo1038 = rc.senseMapInfo(maploc1038);
 
 		accessibilityFactor1038 = 256;
@@ -920,7 +920,7 @@ if (rc.onTheMap(maploc1028)) {
 		initialDirection1038 = null;
 }
 		maploc1047 = maploc1037.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1037)) {
+if (rc.onTheMap(maploc1047)) {
 		mapinfo1047 = rc.senseMapInfo(maploc1047);
 
 		accessibilityFactor1047 = 256;
@@ -928,7 +928,7 @@ if (rc.onTheMap(maploc1037)) {
 		initialDirection1047 = null;
 }
 		maploc1056 = maploc1046.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1046)) {
+if (rc.onTheMap(maploc1056)) {
 		mapinfo1056 = rc.senseMapInfo(maploc1056);
 
 		accessibilityFactor1056 = 256;
@@ -936,7 +936,7 @@ if (rc.onTheMap(maploc1046)) {
 		initialDirection1056 = null;
 }
 		maploc1064 = maploc1057.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1057)) {
+if (rc.onTheMap(maploc1064)) {
 		mapinfo1064 = rc.senseMapInfo(maploc1064);
 
 		accessibilityFactor1064 = 256;
@@ -944,7 +944,7 @@ if (rc.onTheMap(maploc1057)) {
 		initialDirection1064 = null;
 }
 		maploc1065 = maploc1058.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1058)) {
+if (rc.onTheMap(maploc1065)) {
 		mapinfo1065 = rc.senseMapInfo(maploc1065);
 
 		accessibilityFactor1065 = 256;
@@ -952,7 +952,7 @@ if (rc.onTheMap(maploc1058)) {
 		initialDirection1065 = null;
 }
 		maploc1066 = maploc1059.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1059)) {
+if (rc.onTheMap(maploc1066)) {
 		mapinfo1066 = rc.senseMapInfo(maploc1066);
 
 		accessibilityFactor1066 = 256;
@@ -960,7 +960,7 @@ if (rc.onTheMap(maploc1059)) {
 		initialDirection1066 = null;
 }
 		maploc1067 = maploc1060.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1060)) {
+if (rc.onTheMap(maploc1067)) {
 		mapinfo1067 = rc.senseMapInfo(maploc1067);
 
 		accessibilityFactor1067 = 256;
@@ -968,7 +968,7 @@ if (rc.onTheMap(maploc1060)) {
 		initialDirection1067 = null;
 }
 		maploc1068 = maploc1061.add(Direction.SOUTHEAST);
-if (rc.onTheMap(maploc1061)) {
+if (rc.onTheMap(maploc1068)) {
 		mapinfo1068 = rc.senseMapInfo(maploc1068);
 
 		accessibilityFactor1068 = 256;
