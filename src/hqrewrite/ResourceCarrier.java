@@ -117,7 +117,8 @@ public class ResourceCarrier extends Pathfinding {
             updateData();
             int nxtWell = closestWell(tarResource);
             if(nxtWell == -1){
-                rc.disintegrate();
+                ScoutCarrier carrier = new ScoutCarrier(rc);
+                carrier.run();
             } else {
                 targetWellId = nxtWell;
                 target = wells[nxtWell];
