@@ -217,6 +217,7 @@ public class ResourceCarrier extends Pathfinding {
                                 }
                                 foundHome = false;
                                 goingHome = false;
+                                updateTargetHq();
                                 target = wells[targetWellId];
                             }
                             if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) 
