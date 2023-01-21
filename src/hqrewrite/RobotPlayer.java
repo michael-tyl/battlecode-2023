@@ -176,7 +176,7 @@ public strictfp class RobotPlayer {
                             MapLocation buildLoc = new MapLocation(-1, -1);
                             int minDist = 3601;
 
-                            if(totScouts > 0 && scoutCooldown == 0)
+                            if((totScouts > 0 && scoutCooldown == 0) || curWells.length == 0)
                             {
                                 // dance creds: Michael
                                 MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
@@ -185,6 +185,7 @@ public strictfp class RobotPlayer {
                                     rc.buildRobot(RobotType.CARRIER, newLoc);
                                     totScouts--;
                                     scoutCooldown = 100;
+                                    doneOne = true;
                                 }
                             }
                             else {
