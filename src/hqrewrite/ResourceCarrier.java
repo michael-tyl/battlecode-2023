@@ -141,16 +141,34 @@ public class ResourceCarrier extends Pathfinding {
     }
 
     void run(ResourceType tarResource) throws GameActionException{
-        if(wells.length == 0) return;
         targetWellId = closestWell(tarResource); 
+        if(targetWellId == -1){
+            ScoutCarrier carrier = new ScoutCarrier(rc);
+            carrier.run();
+        }
         targetHqId = closestHq();
         target = wells[targetWellId];
+        WellInfo storedWells[] = new WellInfo[0];
         while(true){
             turnCount += 1;
             try { 
                 if(target == null) rc.setIndicatorString("no target");
                 else rc.setIndicatorString(String.valueOf(target.x) + " " + String.valueOf(target.y));
                 for(int t = 0; t < 2; t++){
+                    WellInfo[] nearbyWells = rc.senseNearbyWells();
+                    if(nearbyWells.length > 0) {
+                        for (int j = 0; j < nearbyWells.length; j++) {
+                            if (!comms.wellExists(nearbyWells[j])) {
+                                storedWells = nearbyWells;
+                                break;
+                            }
+                        }
+                    }
+                    if(rc.canWriteSharedArray(0, 0)){
+                        for(int i = 0; i < storedWells.length; i++){
+                            comms.addWell(storedWells[i]);
+                        }
+                    }
                     if(rc.getWeight() >= 5){
                         RobotInfo targets[] = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam().opponent());
                         RobotInfo lowestId = null;

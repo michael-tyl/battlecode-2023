@@ -114,12 +114,12 @@ public class Communication {
     int getNextJob(int hq) throws GameActionException {
         int size = JOB_IND.length - 1;
         for(int i = 0; i <= size; i++){
-            int x = getRange(JOB_L[i], JOB_R[i], JOB_IND[i]);
+            int x = getRange(JOB_L[i], JOB_R[i], JOB_IND[i] + hq);
             if(x > 0){
                 for(int j = i; j + 1 <= size; j++){
-                    setRange(JOB_L[j], JOB_R[j], JOB_IND[j], getRange(JOB_L[j + 1], JOB_R[j + 1], JOB_IND[j + 1]));
+                    setRange(JOB_L[j], JOB_R[j], JOB_IND[j] + hq, getRange(JOB_L[j + 1], JOB_R[j + 1], JOB_IND[j + 1] + hq));
                 }
-                setRange(JOB_L[size], JOB_R[size], JOB_IND[size], 0);
+                setRange(JOB_L[size], JOB_R[size], JOB_IND[size] + hq, 0);
                 return x;
             }
         }
@@ -144,9 +144,9 @@ public class Communication {
     void addJob(int hq, int v) throws GameActionException {
         int size = JOB_IND.length - 1;
         for(int i = 0; i <= size; i++){
-            int x = getRange(JOB_L[i], JOB_R[i], JOB_IND[i]);
+            int x = getRange(JOB_L[i], JOB_R[i], JOB_IND[i] + hq);
             if(x == 0){
-                setRange(JOB_L[i], JOB_R[i], JOB_IND[i], v);
+                setRange(JOB_L[i], JOB_R[i], JOB_IND[i] + hq, v);
                 return;
             }
         }

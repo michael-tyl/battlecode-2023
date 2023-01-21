@@ -106,9 +106,9 @@ public strictfp class RobotPlayer {
         comms.setPos(myId, rc.getLocation());
 
         int totScouts = 5;
-        int numMiners = 20;
+        int numMiners = 70;
         int anchorCnt = 5;
-        int scoutCooldown = 100;
+        int scoutCooldown = 200;
 
         Direction[] stkDir = new Direction[8];
         MapLocation[] inRange = rc.getAllLocationsWithinRadiusSquared(rc.getLocation(), 9);
@@ -128,7 +128,7 @@ public strictfp class RobotPlayer {
                 comms.addJob(myId, 1);
                 rc.buildRobot(RobotType.CARRIER, newLoc);
                 totScouts--;
-                scoutCooldown = 100;
+                scoutCooldown = 200;
             }
         }
 
@@ -146,7 +146,7 @@ public strictfp class RobotPlayer {
                 // Only spawn if not surrounded
                 int enemyCount = countEnemyLaunchers(rc);
 
-                --scoutCooldown;
+                if(scoutCooldown > 0) scoutCooldown--;
 
                 if(enemyCount <= numFriendlies + 4) {
                     int curVal = rc.readSharedArray(63);
@@ -155,7 +155,7 @@ public strictfp class RobotPlayer {
                         rc.writeSharedArray(63, curVal ^ flip);
                     }
 
-                    if(turnCount > 50 && !anchorBuilt && rc.getNumAnchors(Anchor.ACCELERATING) + rc.getNumAnchors(Anchor.STANDARD) <= 1) {
+                    if(turnCount > 100 && !anchorBuilt && rc.getNumAnchors(Anchor.ACCELERATING) + rc.getNumAnchors(Anchor.STANDARD) <= 1) {
                         // build anchor after sufficient resources
                         if(rc.canBuildAnchor(Anchor.ACCELERATING)) {
                             rc.buildAnchor(Anchor.ACCELERATING);
@@ -168,15 +168,16 @@ public strictfp class RobotPlayer {
                     }
                     // prioritize miners and launchers in early game, no need for launchers yet
                     boolean buildMiner = (numMiners > 0);
-                    MapLocation[] curWells = comms.getWells();
+                    MapLocation[] curWells;
 
                     while(rc.getActionCooldownTurns() < GameConstants.COOLDOWN_LIMIT) {
+                        curWells = comms.getWells();
                         boolean doneOne = false;
                         if (buildMiner && numMiners > 0) {
                             MapLocation buildLoc = new MapLocation(-1, -1);
                             int minDist = 3601;
 
-                            if((totScouts > 0 && scoutCooldown == 0) || curWells.length == 0)
+                            if(totScouts > 0 && scoutCooldown == 0)
                             {
                                 // dance creds: Michael
                                 MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
@@ -184,8 +185,7 @@ public strictfp class RobotPlayer {
                                     comms.addJob(myId, 1);
                                     rc.buildRobot(RobotType.CARRIER, newLoc);
                                     totScouts--;
-                                    scoutCooldown = 100;
-                                    doneOne = true;
+                                    scoutCooldown = 200;
                                 }
                             }
                             else {
@@ -210,6 +210,7 @@ public strictfp class RobotPlayer {
                                     else comms.addJob(myId, 3);
                                     buildJob2 = !buildJob2;
                                     rc.buildRobot(RobotType.CARRIER, buildLoc);
+                                    numMiners--;
                                     doneOne = true;
                                 }
                             }
