@@ -60,7 +60,7 @@ with open(f'UnrolledBFS_MR{moveSqRadius}_VR{visionSqRadius}.java', 'w+') as java
 	print('\tpublic static Direction getBestDirectionOneMove(MapLocation target) throws GameActionException {', file = javaFile)
 	print(f'\t\tmaploc{cellID[originX][originY]} = rc.getLocation();', file = javaFile)
 	print(f'\t\tmapinfo{cellID[originX][originY]} = rc.senseMapInfo(maploc{cellID[originX][originY]});', file = javaFile)
-	print(f'\t\taccessibilityFactor{cellID[originX][originY]} = 256;', file = javaFile)
+	print(f'\t\taccessibilityFactor{cellID[originX][originY]} = 0;', file = javaFile)
 	print(f'\t\tpotentialFactor{cellID[originX][originY]} = 256;', file = javaFile)
 	print(f'\t\tinitialDirection{cellID[originX][originY]} = null;', file = javaFile)
 	print(file = javaFile)
@@ -185,7 +185,7 @@ with open(f'UnrolledBFS_MR{moveSqRadius}_VR{visionSqRadius}.java', 'w+') as java
 	if enableDebug:
 		for k in moveCells:
 			x, y = k
-			print(f'System.out.println("{cellID[x][y]}: accesibilityFactor = " + accesibilityFactor{cellID[x][y]} + "potentialFactor = " + potentialFactor{cellID[x][y]});')
+			print(f'System.out.println("{cellID[x][y]}: accessibilityFactor = " + accessibilityFactor{cellID[x][y]} + "potentialFactor = " + potentialFactor{cellID[x][y]});', file = javaFile)
 		print('\t\tSystem.out.println("bestValue = " + bestValue + ", bestDirection = " + (bestDirection == null ? "null" : bestDirection.name()));', file = javaFile)
 
 

@@ -79,7 +79,7 @@ public strictfp class RobotPlayer {
                     }
                 }
             } catch (GameActionException e) {
-                System.out.println(rc.getType() + " fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck fuck");
+                System.out.println(rc.getType() + " Exception");
                 e.printStackTrace();
             } catch (Exception e) {
                 System.out.println(rc.getType() + " Exception");
