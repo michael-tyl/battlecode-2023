@@ -149,6 +149,7 @@ public class ResourceCarrier extends Pathfinding {
         targetHqId = closestHq();
         target = wells[targetWellId];
         WellInfo storedWells[] = new WellInfo[0];
+        int targetWeight = 39;
         while(true){
             turnCount += 1;
             try { 
@@ -169,21 +170,43 @@ public class ResourceCarrier extends Pathfinding {
                             comms.addWell(storedWells[i]);
                         }
                     }
-                    if(rc.getWeight() >= 5){
-                        RobotInfo targets[] = rc.senseNearbyRobots(rc.getType().actionRadiusSquared, rc.getTeam().opponent());
-                        RobotInfo lowestId = null;
-                        for(int i = 0; i < targets.length; i++){
-                            if(targets[i].getType() != RobotType.HEADQUARTERS){
-                                if(lowestId == null) lowestId = targets[i];
-                                else if(targets[i].getID() < lowestId.getID()) lowestId = targets[i];
-                            }
-                        }
-                        if(lowestId != null && rc.canAttack(lowestId.getLocation())){
-                            rc.attack(lowestId.getLocation());
+                    RobotInfo targets[] = rc.senseNearbyRobots(rc.getType().visionRadiusSquared, rc.getTeam().opponent());
+                    int launchers = 0;
+                    for(int i = 0; i < targets.length; i++){
+                        if(targets[i].getType() == RobotType.HEADQUARTERS){
+                            launchers++;
                         }
                     }
+                    if(launchers > 0){
+                        int turnsAlive = rc.getHealth()/(launchers*20);
+                        if(turnsAlive == 1 && rc.getWeight() >= 5){
+                            RobotInfo lowestId = null;
+                            for(int i = 0; i < targets.length; i++){
+                                if(!rc.canAttack(targets[i].getLocation())) continue;
+                                if(targets[i].getType() == RobotType.LAUNCHER){
+                                    if(lowestId == null) lowestId = targets[i];
+                                    else if(targets[i].getID() < lowestId.getID()) lowestId = targets[i];
+                                }
+                            }
+                            if(lowestId != null && rc.canAttack(lowestId.getLocation())){
+                                rc.attack(lowestId.getLocation());
+                                foundHome = false;
+                                goingHome = false;
+                                collecting = false;
+                                targetWellId = closestWell(tarResource);
+                                if(targetWellId == -1){
+                                    ScoutCarrier carrier = new ScoutCarrier(rc);
+                                    carrier.run();
+                                }
+                                target = wells[targetWellId];
+                            }    
+                        }
+                        targetWeight = 20;
+                    } else {
+                        targetWeight = 39;
+                    }
                     if(collecting){
-                        int dif = 39 - rc.getWeight();
+                        int dif = targetWeight - rc.getWeight();
                         if(dif > 0){
                             if(rc.canCollectResource(wells[targetWellId], 1)){
                                 rc.collectResource(wells[targetWellId], 1);
@@ -236,7 +259,11 @@ public class ResourceCarrier extends Pathfinding {
                                 }
                                 foundHome = false;
                                 goingHome = false;
-                                updateTargetHq();
+                                targetWellId = closestWell(tarResource);
+                                if(targetWellId == -1){
+                                    ScoutCarrier carrier = new ScoutCarrier(rc);
+                                    carrier.run();
+                                }
                                 target = wells[targetWellId];
                             }
                             if(rc.canSenseLocation(target) && (rc.canSenseRobotAtLocation(target) 
