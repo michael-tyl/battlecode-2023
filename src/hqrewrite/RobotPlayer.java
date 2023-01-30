@@ -173,22 +173,21 @@ public strictfp class RobotPlayer {
                     while(rc.getActionCooldownTurns() < GameConstants.COOLDOWN_LIMIT) {
                         curWells = comms.getWells();
                         boolean doneOne = false;
-                        if (buildMiner && numMiners > 0) {
+                        if(buildMiner && totScouts > 0 && scoutCooldown == 0)
+                        {
+                            // dance creds: Michael
+                            MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
+                            if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
+                                comms.addJob(myId, 1);
+                                rc.buildRobot(RobotType.CARRIER, newLoc);
+                                totScouts--;
+                                scoutCooldown = 200;
+                            }
+                        } else if (buildMiner && numMiners > 0) {
                             MapLocation buildLoc = new MapLocation(-1, -1);
                             int minDist = 3601;
 
-                            if(totScouts > 0 && scoutCooldown == 0)
-                            {
-                                // dance creds: Michael
-                                MapLocation newLoc = rc.getLocation().add(directions[rng.nextInt(directions.length)]);
-                                if(rc.canSenseLocation(newLoc) && rc.senseMapInfo(newLoc).getCurrentDirection().equals(Direction.CENTER) && rc.canBuildRobot(RobotType.CARRIER, newLoc)){
-                                    comms.addJob(myId, 1);
-                                    rc.buildRobot(RobotType.CARRIER, newLoc);
-                                    totScouts--;
-                                    scoutCooldown = 200;
-                                }
-                            }
-                            else {
+                            if(numMiners > 0) {
                                 for (int i = 0; i < inRange.length; i++) {
                                     if (!rc.canBuildRobot(RobotType.CARRIER, inRange[i]))
                                         continue;
@@ -229,7 +228,7 @@ public strictfp class RobotPlayer {
                                     for (int j = 0; j < mult; j++) {
                                         newLoc = newLoc.add(stkDir[i]);
                                     }
-                                    if (numFriendlies < 42 && turnCount < 1750 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
+                                    if (turnCount < 1750 && rc.canBuildRobot(RobotType.LAUNCHER, newLoc)) {
                                         rc.setIndicatorString("Trying to build a launcher");
                                         doneOne = true;
                                         rc.buildRobot(RobotType.LAUNCHER, newLoc);

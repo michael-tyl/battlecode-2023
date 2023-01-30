@@ -59,7 +59,7 @@ public strictfp class RobotPlayer {
         while (true) {
             try {
                 MapLocation currentLocation = rc.getLocation();
-                if (target != null)
+                if (target != null) 
                     rc.setIndicatorDot(target, 255, 0, 0);
                 if (target == null || currentLocation.isAdjacentTo(target)) {
                     if (pause) {
@@ -71,15 +71,16 @@ public strictfp class RobotPlayer {
                         pause = true;
                     }
                 } else {
-                    System.out.println("current location = " + currentLocation.toString());
+                    // System.out.println("current location = " + currentLocation.toString());
                     Direction optDirection = pathfinder.getBestDirectionOneMove(target);
                     if (optDirection == null) {
-                        rc.setIndicatorString("target = " + target.toString() + "| robot movement cooldown active");
+                        rc.setIndicatorString("robot movement cooldown active");
                     } else if (rc.canMove(optDirection)) {
-                        rc.setIndicatorString("target = " + target.toString() + " | optimal direction = " + optDirection.name() + " | success");
+                        rc.setIndicatorString("success");
+                        rc.setIndicatorLine(currentLocation, currentLocation.add(optDirection), 0, 255, 255);
                         rc.move(optDirection);
                     } else {
-                        rc.setIndicatorString("target = " + target.toString() + " | optimal direction = " + optDirection.name() + " | failed");
+                        rc.setIndicatorString("failed");
                     }
                 }
             } catch (GameActionException e) {
